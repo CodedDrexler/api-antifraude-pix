@@ -1,6 +1,6 @@
 # Pix Antifraude — Bootcamp QI Tech 2026
 
-**Integrantes:** preencher com os nomes do grupo antes da entrega.
+**Integrantes:** Vinícius Guimarães Drexler, Wallace Dametto Teixeira
 
 API síncrona que recebe um Pix e responde `approved`, `rejected` ou
 `two_factor_required`, com motivos explicáveis e histórico em PostgreSQL 16.
