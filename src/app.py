@@ -1,4 +1,5 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -7,6 +8,7 @@ from src.constants import Policy, Settings
 from src.database import build_database
 from src.dtos.pix_dto import PixAnalysisDTO
 from src.errors.handlers import register_error_handlers
+from src.gnn.service import DEFAULT_MODEL, GraphRiskService
 from src.middlewares.request_context import register_request_middleware
 from src.resources.health_check import HealthCheckResource
 from src.resources.pix import PixResource
@@ -21,10 +23,14 @@ def create_app(settings: Settings | None = None, policy: Policy | None = None) -
         yield
         engine.dispose()
 
-    application = FastAPI(title="Pix Antifraude", version="2.1.0", lifespan=lifespan)
+    application = FastAPI(title="Pix Antifraude — Experimental GNN", version="2.2.0", lifespan=lifespan)
     application.state.settings = settings
     application.state.policy = policy or Policy()
     application.state.session_factory = session_factory
+    application.state.graph_service = GraphRiskService(
+        mode=os.environ.get("GNN_MODE", "shadow"),
+        model_path=os.environ.get("GNN_MODEL_PATH", str(DEFAULT_MODEL)),
+    )
     health = HealthCheckResource()
     pix = PixResource()
     application.add_api_route("/health", health.on_get_health, methods=["GET"], tags=["health"])

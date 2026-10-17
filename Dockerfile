@@ -9,6 +9,13 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src ./src
+COPY models ./models
+
+FROM base AS gnn-training
+COPY requirements-gnn.txt .
+RUN pip install --no-cache-dir -r requirements-gnn.txt
+COPY scripts ./scripts
+CMD ["python", "-m", "scripts.train_gnn", "--output", "/app/models/gnn-synthetic-v1.json"]
 
 FROM base AS test
 COPY requirements-dev.txt .

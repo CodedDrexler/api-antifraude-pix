@@ -1,0 +1,2 @@
+# Model hashes must stay stable across Windows and Linux checkouts.
+models/*.json text eol=lf

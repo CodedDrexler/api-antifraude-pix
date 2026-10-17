@@ -18,6 +18,8 @@ CREATE TABLE pix_analysis (
 );
 
 CREATE INDEX ix_pix_payer_time ON pix_analysis (source_document, transaction_date);
+CREATE INDEX ix_pix_destination_time ON pix_analysis (destination_identity, transaction_date);
+CREATE INDEX ix_pix_device_time ON pix_analysis (device_id, transaction_date);
 CREATE INDEX ix_pix_approved_profile ON pix_analysis (source_document, transaction_date)
     INCLUDE (amount, destination_identity, device_id) WHERE status = 'approved';
 

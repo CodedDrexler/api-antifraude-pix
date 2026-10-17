@@ -2,6 +2,11 @@
 
 **Integrantes:** Vinícius Guimarães Drexler, Wallace Dametto Teixeira
 
+**Branch experimental `codex/gnn-prototype`:** inclui um GraphSAGE treinado com
+dados sintéticos. O padrão `GNN_MODE=shadow` registra `metadata.gnn` sem alterar
+a decisão por regras. `GNN_MODE=contribute` permite testar até 20 pontos adicionais.
+Veja [implementação, métricas e comandos do GNN](docs/gnn-prototype.md).
+
 API síncrona que recebe um Pix e responde `approved`, `rejected` ou
 `two_factor_required`, com motivos explicáveis e histórico em PostgreSQL 16.
 Baseada na organização do [repositório informado](https://github.com/CodedDrexler/bootcamp-qi-tech)
@@ -77,6 +82,11 @@ Dois fatores não são executados pela API; a resposta informa ao integrador o p
 Pedidos antigos `pix-v1` continuam consultáveis e idempotentes, sem score retroativo.
 Use um ID novo para experimentar a política atual. O score cabe no JSONB já
 existente, sem migração ou descarte do banco.
+
+Nesta branch, novos IDs também salvam `rule_risk_score` e a avaliação experimental
+`gnn`: saída do modelo, modo, contribuição, versão e hash. O modelo usa somente
+histórico local anterior ao evento; saída de treino sintético não é probabilidade
+validada de fraude. Há uma migração aditiva de índices para bancos existentes.
 
 ## Como rodar e testar
 

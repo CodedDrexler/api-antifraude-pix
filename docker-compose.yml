@@ -8,6 +8,8 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://pix:pix@db:5432/pix
       INTERNAL_TOKEN: ${INTERNAL_TOKEN:-default_token}
+      GNN_MODE: ${GNN_MODE:-shadow}
+      GNN_MODEL_PATH: /app/models/gnn-synthetic-v1.json
     depends_on:
       db:
         condition: service_healthy
@@ -45,5 +47,12 @@ services:
     depends_on:
       api:
         condition: service_healthy
+  gnn-training:
+    profiles: [gnn]
+    build:
+      context: .
+      target: gnn-training
+    volumes:
+      - ./models:/app/models
 volumes:
   pix_data:

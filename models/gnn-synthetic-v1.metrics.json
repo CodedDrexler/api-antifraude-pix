@@ -1,0 +1,70 @@
+{
+  "scope": "SYNTHETIC DATA ONLY; no claim about real Pix fraud detection",
+  "seed": 42,
+  "torch_version": "2.9.1+cpu",
+  "best_epoch": 115,
+  "initial_training_loss": 0.6917486786842346,
+  "final_training_loss": 0.23436081409454346,
+  "split": {
+    "train": 500,
+    "validation": 150,
+    "test": 200,
+    "entity_disjoint": true,
+    "chronological_months": [
+      1,
+      5,
+      9
+    ]
+  },
+  "validation": {
+    "threshold": 0.5,
+    "precision": 0.7586206896551724,
+    "recall": 0.8148148148148148,
+    "false_positive_rate": 0.14583333333333334,
+    "f1": 0.7857142857142857,
+    "roc_auc": 0.941358024691358,
+    "true_positive": 44,
+    "false_positive": 14,
+    "true_negative": 82,
+    "false_negative": 10
+  },
+  "test": {
+    "threshold": 0.5,
+    "precision": 0.7538461538461538,
+    "recall": 0.8596491228070176,
+    "false_positive_rate": 0.11188811188811189,
+    "f1": 0.8032786885245902,
+    "roc_auc": 0.962949331370384,
+    "true_positive": 49,
+    "false_positive": 16,
+    "true_negative": 127,
+    "false_negative": 8
+  },
+  "test_at_runtime_threshold_0_8": {
+    "threshold": 0.8,
+    "precision": 1.0,
+    "recall": 0.631578947368421,
+    "false_positive_rate": 0.0,
+    "f1": 0.7741935483870968,
+    "roc_auc": 0.962949331370384,
+    "true_positive": 36,
+    "false_positive": 0,
+    "true_negative": 143,
+    "false_negative": 21
+  },
+  "no_message_passing_ablation": {
+    "threshold": 0.5,
+    "precision": 0.285,
+    "recall": 1.0,
+    "false_positive_rate": 1.0,
+    "f1": 0.44357976653696496,
+    "roc_auc": 0.9574285363759047,
+    "true_positive": 57,
+    "false_positive": 143,
+    "true_negative": 0,
+    "false_negative": 0
+  },
+  "export_max_absolute_error": 3.8701928989359757e-07,
+  "numpy_inference_p95_ms": 0.05282965062178842,
+  "model_sha256": "e87cdbc048455cf00360bd568601ce6819efab002a1c4b779da285dcd5a7540c"
+}

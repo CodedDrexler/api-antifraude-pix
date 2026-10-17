@@ -9,6 +9,7 @@ from src.constants import Policy
 from src.controllers.decision_engine import DecisionEngine
 from src.dtos.pix_dto import PixAnalysisDTO
 from src.errors.pix_errors import AnalysisNotFound, TransactionConflict
+from src.gnn.service import HISTORY_DAYS, MAX_HISTORY, GraphRiskService, combine_graph_risk
 from src.repositories.pix_repository import PixRepository
 from src.schemas.pix import PixTransactionCreate
 
@@ -18,10 +19,11 @@ def fingerprint(value) -> str:
 
 
 class PixController:
-    def __init__(self, session: Session, policy: Policy):
+    def __init__(self, session: Session, policy: Policy, graph_service: GraphRiskService | None = None):
         self.session = session
         self.repository = PixRepository(session)
         self.engine = DecisionEngine(policy)
+        self.graph_service = graph_service or GraphRiskService(mode="off")
 
     def analyze(self, transaction: PixTransactionCreate) -> PixAnalysisDTO:
         payload = transaction.model_dump(mode="json")
@@ -40,6 +42,13 @@ class PixController:
         destination_identity = fingerprint(destination)
         history = self.repository.history(transaction, destination_identity, self.engine.policy)
         status, metadata = self.engine.evaluate(transaction, history)
+        graph_history, truncated = [], False
+        if self.graph_service.enabled:
+            graph_history, truncated = self.repository.graph_history(
+                transaction, destination_identity, MAX_HISTORY, HISTORY_DAYS
+            )
+        graph_result = self.graph_service.assess(payload, graph_history, truncated)
+        status, metadata = combine_graph_risk(status, metadata, graph_result)
         analysis = self.repository.create(
             analysis_key=str(uuid4()),
             transaction_id=transaction.id,

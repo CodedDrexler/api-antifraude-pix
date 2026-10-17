@@ -47,6 +47,13 @@ detalham o racional. O score usa o mesmo retrato de histórico obtido dentro da
 transação protegida pelas travas existentes. Análises antigas mantêm seu conteúdo;
 novos IDs recebem o score salvo em `decision_metadata`, sem mudança de schema SQL.
 
+Na branch `codex/gnn-prototype`, um GraphSAGE experimental adiciona a avaliação
+`metadata.gnn`. O padrão shadow preserva a decisão por regras; contribute é uma
+opção explícita para testar até 20 pontos adicionais. Treino, inferência, limites
+de histórico e resultados sintéticos estão em [gnn-prototype.md](gnn-prototype.md).
+O payload e a decisão continuam atômicos; os índices de dispositivo e destino
+possuem migração SQL aditiva para bases existentes.
+
 Adaptações em relação à referência:
 
 - Schemas Pydantic, já usados no projeto local, substituem o decorator de JSON Schema.

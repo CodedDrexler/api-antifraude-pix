@@ -8,7 +8,7 @@ from src.schemas.pix import PixTransactionCreate
 
 
 def get_pix_controller(request: Request, session: Session = Depends(get_session)):
-    return PixController(session, request.app.state.policy)
+    return PixController(session, request.app.state.policy, request.app.state.graph_service)
 
 
 class PixResource:
