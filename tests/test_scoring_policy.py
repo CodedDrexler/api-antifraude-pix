@@ -18,11 +18,11 @@ from src.schemas.pix import PixTransactionCreate
     ],
 )
 def test_score_boundaries_and_single_group_rejection_guard(payload, points, expected):
-    weights = replace(RuleWeights(), amount_requires_two_factor=points)
+    weights = replace(RuleWeights(), amount_above_customer_profile=points)
     policy = replace(Policy(), scoring=replace(ScoringPolicy(), weights=weights))
     payload["amount"] = 100_000
     status, metadata = DecisionEngine(policy).evaluate(
-        PixTransactionCreate.model_validate(payload), History(0, 0, 0, 0, False, False)
+        PixTransactionCreate.model_validate(payload), History(0, 0, 0, 0, False, False, 1, 10_000)
     )
     assert status == expected
     assert metadata["risk_score"] == points
@@ -36,7 +36,7 @@ def test_score_boundaries_and_single_group_rejection_guard(payload, points, expe
         {"rejection_threshold": 101},
         {"two_factor_threshold": 80},
         {"minimum_rejection_groups": 0},
-        {"minimum_rejection_groups": 7},
+        {"minimum_rejection_groups": 8},
         {"rejection_threshold": True},
         {"weights": replace(RuleWeights(), unfamiliar_device=-1)},
         {"weights": replace(RuleWeights(), unfamiliar_device=101)},

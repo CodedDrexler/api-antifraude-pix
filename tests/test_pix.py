@@ -17,8 +17,8 @@ def post(api, payload):
 
 def test_contract_and_saved_decision(api, payload):
     decision = post(api, payload)
-    assert decision["status"] == "approved"
-    assert decision["metadata"]["reasons"] == ["no_rule_triggered"]
+    assert decision["status"] == "two_factor_required"
+    assert decision["metadata"]["reasons"] == ["first_transaction"]
     status, saved, headers = api("GET", "/pix/transaction/" + payload["id"])
     assert status == 200
     assert saved == decision
@@ -28,11 +28,11 @@ def test_contract_and_saved_decision(api, payload):
 @pytest.mark.parametrize(
     ("amount", "expected"),
     [
-        (1, "approved"),
-        (99_999, "approved"),
+        (1, "two_factor_required"),
+        (99_999, "two_factor_required"),
         (100_000, "two_factor_required"),
         (1_999_999, "two_factor_required"),
-        (2_000_000, "rejected"),
+        (2_000_000, "two_factor_required"),
     ],
 )
 def test_amount_boundaries(api, payload, amount, expected):
@@ -51,25 +51,27 @@ def test_account_age_boundary(api, payload, age, expected_score):
     at = datetime.fromisoformat(payload["transaction_date"])
     payload["source_account"]["opening_date"] = (at - age).isoformat()
     decision = post(api, payload)
-    assert decision["status"] == "approved"
-    assert decision["metadata"]["risk_score"] == expected_score
+    assert decision["status"] == "two_factor_required"
+    assert decision["metadata"]["risk_score"] == expected_score + 30
 
 
 def test_all_reasons_and_rejection_priority(api, payload):
-    payload["amount"] = 2_000_000
+    payload["amount"] = 3_000_000
     payload["source_account"]["opening_date"] = payload["transaction_date"]
     decision = post(api, payload)
     assert decision["status"] == "rejected"
     assert decision["metadata"]["reasons"] == [
-        "amount_above_rejection_limit",
-        "amount_requires_two_factor",
+        "accumulated_amount_above_limit",
+        "first_transaction",
         "new_source_account",
     ]
 
 
 def test_sixth_attempt_is_rejected_and_rejections_are_saved(api, payload):
-    for _ in range(5):
-        assert post(api, new_transaction(payload))["status"] == "approved"
+    for index in range(5):
+        assert post(api, new_transaction(payload))["status"] == (
+            "two_factor_required" if index == 0 else "approved"
+        )
     rejected = post(api, payload)
     assert rejected["status"] == "rejected"
     assert "velocity_above_limit" in rejected["metadata"]["reasons"]
@@ -122,27 +124,30 @@ def test_accumulated_value_boundary(api, payload):
 
 def seed_profile(api, payload, count, amount=1000):
     at = datetime.fromisoformat(payload["transaction_date"])
-    for index in range(count):
+    bootstrap = new_transaction(
+        payload, amount=amount, transaction_date=(at - timedelta(hours=count + 1)).isoformat()
+    )
+    assert post(api, bootstrap)["status"] == "two_factor_required"
+    for index in reversed(range(count)):
         seed = new_transaction(
             payload, amount=amount, transaction_date=(at - timedelta(hours=index + 1)).isoformat()
         )
         assert post(api, seed)["status"] == "approved"
 
 
-def test_profile_requires_five_approved_samples(api, payload):
-    seed_profile(api, payload, 4, amount=10_000)
-    candidate = new_transaction(payload, amount=50_000)
-    assert post(api, candidate)["status"] == "approved"
-    candidate = new_transaction(payload, amount=90_000)
-    result = post(api, candidate)
-    assert result["status"] == "approved"
-    assert result["metadata"]["risk_score"] == 25
+def test_profile_uses_even_one_registered_sample(api, payload):
+    at = datetime.fromisoformat(payload["transaction_date"])
+    first = new_transaction(payload, amount=10_000, transaction_date=(at - timedelta(hours=1)).isoformat())
+    assert post(api, first)["status"] == "two_factor_required"
+    result = post(api, new_transaction(payload, amount=50_000))
+    assert result["status"] == "two_factor_required"
+    assert result["metadata"]["risk_score"] == 80
     assert "amount_above_customer_profile" in result["metadata"]["reasons"]
 
 
 def test_unfamiliar_device_requires_history_and_value(api, payload):
     seed_profile(api, payload, 3, amount=20_000)
-    payload["source"]["device_id"] = "device-new"
+    payload["source"]["device_id"] = "device-new-" + payload["id"]
     payload["amount"] = 50_000
     decision = post(api, payload)
     assert decision["status"] == "approved"
@@ -150,15 +155,15 @@ def test_unfamiliar_device_requires_history_and_value(api, payload):
     assert "unfamiliar_device" in decision["metadata"]["reasons"]
 
 
-def test_new_device_without_history_does_not_block_first_pix(api, payload):
+def test_new_device_without_history_requests_first_pix_two_factor(api, payload):
     payload["amount"] = 50_000
-    assert post(api, payload)["status"] == "approved"
+    assert post(api, payload)["status"] == "two_factor_required"
 
 
 def test_new_destination_scores_only_above_minimum(api, payload):
     payload["destination_account"]["opening_date"] = payload["transaction_date"]
     payload["amount"] = 49_999
-    assert post(api, new_transaction(payload))["status"] == "approved"
+    assert post(api, new_transaction(payload))["status"] == "two_factor_required"
     # A different, previously unseen destination.
     payload["destination_account"]["account_number"] = "unseen"
     payload["amount"] = 50_000
@@ -170,12 +175,12 @@ def test_new_destination_scores_only_above_minimum(api, payload):
 
 def test_missing_geolocation_is_valid(api, payload):
     payload["source"].pop("geolocation")
-    assert post(api, payload)["status"] == "approved"
+    assert post(api, payload)["status"] == "two_factor_required"
 
 
 def test_cnpj_is_valid(api, payload):
     payload["source_account"]["owner"]["document_number"] = f"{int(payload['id'][-12:], 16):014d}"[-14:]
-    assert post(api, payload)["status"] == "approved"
+    assert post(api, payload)["status"] == "two_factor_required"
 
 
 @pytest.mark.parametrize(
@@ -215,7 +220,7 @@ def test_invalid_payload_is_rejected_without_consuming_id(api, payload, path, va
     assert status == 400, body
     assert set(body) == {"title", "description", "translation", "code"}
     assert api("GET", "/pix/transaction/" + payload["id"])[0] == 404
-    assert post(api, payload)["status"] == "approved"
+    assert post(api, payload)["status"] == "two_factor_required"
 
 
 def test_required_and_unknown_fields(api, payload):
@@ -254,7 +259,8 @@ def test_concurrent_distinct_pix_cannot_bypass_velocity(api, payload):
     transactions = [new_transaction(payload) for _ in range(6)]
     with ThreadPoolExecutor(max_workers=6) as pool:
         results = list(pool.map(lambda body: post(api, body), transactions))
-    assert sum(result["status"] == "approved" for result in results) == 5
+    assert sum(result["status"] == "approved" for result in results) == 4
+    assert sum(result["status"] == "two_factor_required" for result in results) == 1
     assert sum(result["status"] == "rejected" for result in results) == 1
 
 
@@ -273,22 +279,26 @@ def test_known_device_does_not_challenge_normal_amount(api, payload):
 
 
 def test_known_destination_does_not_trigger_new_destination_rule(api, payload):
-    payload["destination_account"]["opening_date"] = payload["transaction_date"]
-    post(api, new_transaction(payload))
+    payload["destination_account"]["opening_date"] = (
+        datetime.fromisoformat(payload["transaction_date"]) - timedelta(days=1)
+    ).isoformat()
+    seed_profile(api, payload, 1, amount=20_000)
     payload["amount"] = 50_000
     decision = post(api, payload)
     assert decision["status"] == "approved"
     assert decision["metadata"]["known_destination"] is True
 
 
-def test_profile_excludes_old_history(api, payload):
+def test_amount_profile_includes_old_registered_history(api, payload):
     at = datetime.fromisoformat(payload["transaction_date"])
     for index in range(5):
         post(api, new_transaction(payload, transaction_date=(at - timedelta(days=31 + index)).isoformat()))
     payload["amount"] = 50_000
     decision = post(api, payload)
-    assert decision["status"] == "approved"
-    assert decision["metadata"]["profile_transactions"] == 0
+    assert decision["status"] == "two_factor_required"
+    assert decision["metadata"]["registered_transactions"] == 5
+    assert decision["metadata"]["profile_transactions"] == 1
+    assert decision["metadata"]["profile_basis"] == "initial_pending_attempt"
 
 
 def test_challenged_transactions_do_not_establish_trust(api, payload):
@@ -301,7 +311,7 @@ def test_challenged_transactions_do_not_establish_trust(api, payload):
             ),
         )
     decision = post(api, payload)
-    assert decision["metadata"]["profile_transactions"] == 0
+    assert decision["metadata"]["approved_transactions"] == 0
     assert decision["metadata"]["known_device"] is False
 
 

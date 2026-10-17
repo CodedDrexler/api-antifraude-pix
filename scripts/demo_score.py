@@ -17,11 +17,14 @@ def main():
     args = parser.parse_args()
     token = os.environ.get("INTERNAL_TOKEN", "default_token")
     template = json.loads((Path(__file__).resolve().parents[1] / "examples/pix.json").read_text())
-    at = datetime.now(timezone.utc)
+    # A fixed daytime hour keeps these three score examples independent of launch time.
+    at = datetime.now(timezone.utc).replace(hour=15, minute=0, second=0, microsecond=0)
 
     def payload():
         body = copy.deepcopy(template)
         body["source_account"]["owner"]["document_number"] = f"{uuid4().int % 10**11:011d}"
+        body["source"]["device_id"] = "demo-device-" + uuid4().hex
+        body["destination_account"]["account_number"] = "demo-destination-" + uuid4().hex
         body["source_account"]["opening_date"] = (at - timedelta(days=365)).isoformat()
         body["destination_account"]["opening_date"] = (at - timedelta(days=365)).isoformat()
         body["transaction_date"] = at.isoformat()
@@ -39,31 +42,32 @@ def main():
         with urlopen(request, timeout=15) as response:
             return json.load(response)
 
-    def seed(body, count):
-        for i in range(count):
+    def seed(body, count, amount=20_000):
+        for i in reversed(range(count + 1)):
             candidate = copy.deepcopy(body)
-            candidate["amount"] = 10_000
+            candidate["amount"] = amount
             candidate["transaction_date"] = (at - timedelta(hours=i + 1)).isoformat()
-            if post(candidate)["status"] != "approved":
-                raise RuntimeError("Synthetic profile seed was not approved")
+            if post(candidate)["status"] != ("two_factor_required" if i == count else "approved"):
+                raise RuntimeError("Unexpected synthetic profile seed decision")
 
-    normal = post(payload())
+    normal_payload = payload()
+    seed(normal_payload, 1, amount=1000)
+    normal = post(normal_payload)
     uncertain = payload()
     seed(uncertain, 3)
     uncertain["amount"] = 50_000
-    uncertain["source"]["device_id"] = "unfamiliar-device"
+    uncertain["source"]["device_id"] = "unfamiliar-device-" + uuid4().hex
     uncertain["destination_account"]["account_number"] = "unfamiliar-destination"
     challenged = post(uncertain)
     risky = payload()
-    seed(risky, 5)
+    seed(risky, 5, amount=10_000)
     risky["amount"] = 100_000
     risky["destination_account"]["account_number"] = "unfamiliar-destination"
-    risky["destination_account"]["opening_date"] = at.isoformat()
     rejected = post(risky)
     for label, response, expected_status, expected_score in (
         ("normal", normal, "approved", 0),
         ("combined_signals", challenged, "two_factor_required", 35),
-        ("high_risk", rejected, "rejected", 80),
+        ("high_risk", rejected, "rejected", 95),
     ):
         if (response["status"], response["metadata"].get("risk_score")) != (expected_status, expected_score):
             raise RuntimeError(f"Unexpected decision for {label}: {response}")
@@ -73,7 +77,7 @@ def main():
                     "scenario": label,
                     "status": response["status"],
                     "risk_score": response["metadata"]["risk_score"],
-                    "reasons": response["metadata"]["reasons"],
+                    "risk_factors": response["metadata"]["risk_factors"],
                 }
             )
         )

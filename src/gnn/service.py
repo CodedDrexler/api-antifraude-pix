@@ -6,6 +6,7 @@ from pathlib import Path
 
 from src.gnn.graph import build_graph
 from src.gnn.model import GraphSageModel
+from src.risk_context import FACTOR_LABELS
 
 MAX_HISTORY = 300
 HISTORY_DAYS = 30
@@ -99,14 +100,19 @@ def combine_graph_risk(status, metadata, graph_result):
     }
     if graph_result["mode"] != "contribute" or graph_result["status"] != "scored":
         return status, metadata
-    points = graph_result["proposed_points"]
-    metadata["policy"]["version"] = "pix-score-v2+gnn-experimental-v1"
-    if points:
+    proposed_points = graph_result["proposed_points"]
+    factor_weight = metadata["policy"]["scoring"]["factor_weights"]["graph"]
+    weighted_points = proposed_points * factor_weight // 100
+    points = min(MAX_POINTS, weighted_points)
+    metadata["policy"]["version"] += "+gnn-experimental-v1"
+    if proposed_points:
         metadata["triggered_rules"].append(
             {
                 "code": "gnn_relational_pattern",
                 "group": "graph",
-                "weight": points,
+                "risk_factor": "graph",
+                "weight": proposed_points,
+                "weighted_points": weighted_points,
                 "contribution": points,
                 "observed": graph_result["gnn_score"],
                 "threshold": graph_result["threshold"],
@@ -114,11 +120,29 @@ def combine_graph_risk(status, metadata, graph_result):
             }
         )
         metadata["reasons"] = [rule["code"] for rule in metadata["triggered_rules"]]
-        metadata["raw_score"] += points
-        metadata["group_scores"]["graph"] = {"raw_score": points, "score": points, "cap": MAX_POINTS}
-        metadata["risk_group_count"] += 1
+        metadata["raw_score"] += proposed_points
+        metadata["group_scores"]["graph"] = {
+            "raw_score": proposed_points,
+            "score": points,
+            "cap": MAX_POINTS,
+        }
+        metadata["risk_factors"].append(
+            {
+                "name": "graph",
+                "label": FACTOR_LABELS["graph"],
+                "raw_score": proposed_points,
+                "weighted_score": weighted_points,
+                "score": points,
+                "cap": MAX_POINTS,
+                "weight": factor_weight,
+                "rules": ["gnn_relational_pattern"],
+                "hard_limits": [],
+            }
+        )
+        metadata["risk_group_count"] += int(points > 0)
     total = sum(group["score"] for group in metadata["group_scores"].values())
     metadata["risk_score"] = min(100, total)
+    metadata["risk_factors_sum"] = total
     metadata["score_cap_reduction"] = max(0, total - 100)
     # This is the change to the final score, which can be smaller than the proposed points at the cap.
     metadata["gnn"]["applied_points"] = metadata["risk_score"] - metadata["rule_risk_score"]
@@ -140,4 +164,6 @@ def combine_graph_risk(status, metadata, graph_result):
         return "rejected", {**metadata, "decision_source": "risk_score"}
     if score >= scoring["two_factor_threshold"]:
         return "two_factor_required", {**metadata, "decision_source": "risk_score"}
+    if metadata["decision_source"] in {"first_transaction", "insufficient_history"}:
+        return "two_factor_required", metadata
     return "approved", {**metadata, "decision_source": "risk_score"}

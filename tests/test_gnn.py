@@ -18,7 +18,7 @@ from src.schemas.pix import PixTransactionCreate
 
 def base_decision(payload):
     return DecisionEngine(Policy()).evaluate(
-        PixTransactionCreate.model_validate(payload), History(0, 0, 0, 0, False, False)
+        PixTransactionCreate.model_validate(payload), History(0, 0, 0, 0, False, False, 1, 1000)
     )
 
 
@@ -136,22 +136,51 @@ def test_opt_in_graph_contribution_can_request_two_factor(payload):
     assert enriched["rule_risk_score"] == 15
     assert enriched["gnn"]["applied_points"] == 20
     assert combined == "two_factor_required"
-    assert enriched["policy"]["version"] == "pix-score-v2+gnn-experimental-v1"
+    assert enriched["policy"]["version"] == "pix-score-v5+gnn-experimental-v1"
 
 
 def test_graph_cannot_reduce_a_hard_rejection_or_exceed_score_cap(payload):
-    payload["amount"] = 2_000_000
+    payload["amount"] = 3_000_000
     payload["source_account"]["opening_date"] = payload["transaction_date"]
-    status, metadata = base_decision(payload)
+    status, metadata = DecisionEngine(Policy()).evaluate(
+        PixTransactionCreate.model_validate(payload), History(0, 0, 0, 0, False, False, 1, 3_000_000)
+    )
     combined, enriched = combine_graph_risk(status, metadata, high_graph_result())
     assert combined == "rejected"
     assert enriched["decision_source"] == "hard_limit"
     assert enriched["risk_score"] == 100
     assert enriched["gnn"]["applied_points"] == 5
+    assert enriched["risk_factors_sum"] == 115
+    assert sum(f["score"] for f in enriched["risk_factors"]) == enriched["risk_factors_sum"]
     assert (
         sum(rule["contribution"] for rule in enriched["triggered_rules"]) - enriched["score_cap_reduction"]
         == 100
     )
+
+
+def test_graph_factor_weight_is_applied_and_explained(payload):
+    status, metadata = base_decision(payload)
+    metadata["policy"]["version"] = "custom-policy-v3"
+    metadata["policy"]["scoring"]["factor_weights"]["graph"] = 50
+    combined, enriched = combine_graph_risk(status, metadata, high_graph_result())
+    assert combined == "approved"
+    assert enriched["risk_score"] == 10
+    assert next(f for f in enriched["risk_factors"] if f["name"] == "graph")["weight"] == 50
+    assert enriched["policy"]["version"] == "custom-policy-v3+gnn-experimental-v1"
+    assert next(f for f in enriched["risk_factors"] if f["name"] == "graph")["score"] == 10
+    assert enriched["triggered_rules"][-1]["risk_factor"] == "graph"
+    assert enriched["triggered_rules"][-1]["weight"] == 20
+    assert enriched["triggered_rules"][-1]["contribution"] == 10
+
+
+def test_zero_graph_factor_does_not_count_as_rejection_evidence(payload):
+    status, metadata = base_decision(payload)
+    metadata["policy"]["scoring"]["factor_weights"]["graph"] = 0
+    combined, enriched = combine_graph_risk(status, metadata, high_graph_result())
+    assert combined == status
+    assert enriched["risk_score"] == metadata["risk_score"]
+    assert enriched["risk_group_count"] == metadata["risk_group_count"]
+    assert next(f for f in enriched["risk_factors"] if f["name"] == "graph")["score"] == 0
 
 
 def test_report_records_export_parity_and_training_improvement():

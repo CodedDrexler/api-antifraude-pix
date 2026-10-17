@@ -1,0 +1,211 @@
+{
+  "scope": "SYNTHETIC ONLY; not calibrated to real Pix traffic or confirmed fraud outcomes",
+  "generator": "src.gnn.synthetic.scenario; seeds 0..N-1; unchanged labeled scenario generator",
+  "threshold_selection": "operator hypotheses; automatic blocking disabled after initial validation added 3 legitimate rejections and 0 fraud rejections",
+  "evaluation_limit": "both splits were inspected during prototype development; not an untouched final holdout",
+  "gnn_mode": "off for both comparison lanes; only rule engine and account history are compared",
+  "policy_version": "pix-score-v5",
+  "untrust_policy": {
+    "enabled": true,
+    "rejection_enabled": false,
+    "window_hours": 24,
+    "two_factor_threshold": 40,
+    "notification_threshold": 60,
+    "rejection_threshold": 80,
+    "maximum_increment": 25,
+    "score_divisor": 4,
+    "minimum_rejection_events": 4
+  },
+  "validation": {
+    "samples": 150,
+    "counts": {
+      "additional_fraud_rejections": 0,
+      "additional_legitimate_challenges": 3,
+      "additional_legitimate_rejections": 0,
+      "baseline_synthetic_fraud_rejected": 6,
+      "baseline_synthetic_fraud_two_factor_required": 48,
+      "baseline_synthetic_legitimate_approved": 47,
+      "baseline_synthetic_legitimate_rejected": 9,
+      "baseline_synthetic_legitimate_two_factor_required": 40,
+      "changed_decisions": 3,
+      "notification_indications": 24,
+      "synthetic_fraud": 54,
+      "synthetic_legitimate": 96,
+      "untrust_synthetic_fraud_rejected": 6,
+      "untrust_synthetic_fraud_two_factor_required": 48,
+      "untrust_synthetic_legitimate_approved": 44,
+      "untrust_synthetic_legitimate_rejected": 9,
+      "untrust_synthetic_legitimate_two_factor_required": 43
+    },
+    "by_scenario": {
+      "family": {
+        "two_factor_required": 19,
+        "rejected": 6
+      },
+      "fan_in": {
+        "two_factor_required": 23,
+        "rejected": 2
+      },
+      "merchant": {
+        "approved": 18,
+        "two_factor_required": 2
+      },
+      "new_merchant": {
+        "two_factor_required": 19,
+        "rejected": 3
+      },
+      "normal": {
+        "approved": 26,
+        "two_factor_required": 3
+      },
+      "ring": {
+        "two_factor_required": 25,
+        "rejected": 4
+      }
+    }
+  },
+  "test": {
+    "samples": 200,
+    "counts": {
+      "additional_fraud_rejections": 0,
+      "additional_legitimate_challenges": 1,
+      "additional_legitimate_rejections": 0,
+      "baseline_synthetic_fraud_rejected": 6,
+      "baseline_synthetic_fraud_two_factor_required": 51,
+      "baseline_synthetic_legitimate_approved": 67,
+      "baseline_synthetic_legitimate_rejected": 10,
+      "baseline_synthetic_legitimate_two_factor_required": 66,
+      "changed_decisions": 1,
+      "notification_indications": 22,
+      "synthetic_fraud": 57,
+      "synthetic_legitimate": 143,
+      "untrust_synthetic_fraud_rejected": 6,
+      "untrust_synthetic_fraud_two_factor_required": 51,
+      "untrust_synthetic_legitimate_approved": 66,
+      "untrust_synthetic_legitimate_rejected": 10,
+      "untrust_synthetic_legitimate_two_factor_required": 67
+    },
+    "by_scenario": {
+      "family": {
+        "two_factor_required": 36,
+        "rejected": 5
+      },
+      "fan_in": {
+        "two_factor_required": 18,
+        "rejected": 3
+      },
+      "merchant": {
+        "two_factor_required": 4,
+        "approved": 36
+      },
+      "new_merchant": {
+        "rejected": 5,
+        "two_factor_required": 26
+      },
+      "normal": {
+        "approved": 30,
+        "two_factor_required": 1
+      },
+      "ring": {
+        "two_factor_required": 33,
+        "rejected": 3
+      }
+    }
+  },
+  "experimental_blocking_validation": {
+    "samples": 150,
+    "counts": {
+      "additional_fraud_rejections": 0,
+      "additional_legitimate_challenges": 1,
+      "additional_legitimate_rejections": 3,
+      "baseline_synthetic_fraud_rejected": 6,
+      "baseline_synthetic_fraud_two_factor_required": 48,
+      "baseline_synthetic_legitimate_approved": 47,
+      "baseline_synthetic_legitimate_rejected": 9,
+      "baseline_synthetic_legitimate_two_factor_required": 40,
+      "changed_decisions": 4,
+      "notification_indications": 24,
+      "synthetic_fraud": 54,
+      "synthetic_legitimate": 96,
+      "untrust_synthetic_fraud_rejected": 6,
+      "untrust_synthetic_fraud_two_factor_required": 48,
+      "untrust_synthetic_legitimate_approved": 44,
+      "untrust_synthetic_legitimate_rejected": 12,
+      "untrust_synthetic_legitimate_two_factor_required": 40
+    },
+    "by_scenario": {
+      "family": {
+        "two_factor_required": 19,
+        "rejected": 6
+      },
+      "fan_in": {
+        "two_factor_required": 23,
+        "rejected": 2
+      },
+      "merchant": {
+        "approved": 18,
+        "two_factor_required": 2
+      },
+      "new_merchant": {
+        "two_factor_required": 19,
+        "rejected": 3
+      },
+      "normal": {
+        "approved": 26,
+        "rejected": 3
+      },
+      "ring": {
+        "two_factor_required": 25,
+        "rejected": 4
+      }
+    }
+  },
+  "experimental_blocking_test": {
+    "samples": 200,
+    "counts": {
+      "additional_fraud_rejections": 0,
+      "additional_legitimate_challenges": 1,
+      "additional_legitimate_rejections": 4,
+      "baseline_synthetic_fraud_rejected": 6,
+      "baseline_synthetic_fraud_two_factor_required": 51,
+      "baseline_synthetic_legitimate_approved": 67,
+      "baseline_synthetic_legitimate_rejected": 10,
+      "baseline_synthetic_legitimate_two_factor_required": 66,
+      "changed_decisions": 5,
+      "notification_indications": 22,
+      "synthetic_fraud": 57,
+      "synthetic_legitimate": 143,
+      "untrust_synthetic_fraud_rejected": 6,
+      "untrust_synthetic_fraud_two_factor_required": 51,
+      "untrust_synthetic_legitimate_approved": 66,
+      "untrust_synthetic_legitimate_rejected": 14,
+      "untrust_synthetic_legitimate_two_factor_required": 63
+    },
+    "by_scenario": {
+      "family": {
+        "rejected": 8,
+        "two_factor_required": 33
+      },
+      "fan_in": {
+        "two_factor_required": 18,
+        "rejected": 3
+      },
+      "merchant": {
+        "two_factor_required": 4,
+        "approved": 36
+      },
+      "new_merchant": {
+        "rejected": 5,
+        "two_factor_required": 26
+      },
+      "normal": {
+        "approved": 30,
+        "rejected": 1
+      },
+      "ring": {
+        "two_factor_required": 33,
+        "rejected": 3
+      }
+    }
+  }
+}

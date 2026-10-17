@@ -18,6 +18,7 @@ class PixAnalysis(Base):
     transaction_id: Mapped[str] = mapped_column(String(128), unique=True)
     payload_hash: Mapped[str] = mapped_column(String(64))
     source_document: Mapped[str] = mapped_column(String(14))
+    source_account_identity: Mapped[str | None] = mapped_column(String(64), nullable=True)
     destination_identity: Mapped[str] = mapped_column(String(64))
     device_id: Mapped[str] = mapped_column(String(128))
     amount: Mapped[int] = mapped_column(BigInteger)

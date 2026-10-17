@@ -1,7 +1,30 @@
-# Experimental GNN branch
+# Experimental GNN
 
-Branch: `codex/gnn-prototype`. This is a synthetic-data demonstration, not a model
-validated against real fraud. Main remains the rule-scoring baseline.
+## Resumo em português
+
+O modelo é um **GraphSAGE supervisionado de duas camadas**, com agregação média
+dos vizinhos. Contas e dispositivos são nós; transferências e uso de aparelhos
+criam arestas bidirecionais. Cada camada combina o estado do nó com a média dos
+vizinhos. O classificador final combina as representações da origem, do destino
+e do aparelho com valor, idade das contas e frequência do pagador.
+
+O treino usa cenários sintéticos com rótulos do gerador, sem copiar decisões das
+regras. Inclui famílias compartilhando aparelhos e comerciantes legítimos, além
+de redes de compartilhamento e concentração em destinatários. Não usa IP,
+geolocalização, canal ou horário como variáveis do modelo atual. As regras
+explícitas de canal/horário e diversidade de titulares complementam o GNN.
+Nos atributos do grafo, "users" de um aparelho significa contas de origem distintas;
+a nova regra `shared_device` distingue titulares pelo documento. São medidas diferentes.
+
+O padrão **shadow** apenas observa. Dados insuficientes, vizinhança truncada e
+falhas provocam abstenção explícita. O modo optativo **contribute** aplica até
+20 pontos. Nenhuma métrica sintética comprova a eficácia no tráfego real.
+Os pesos e o formato de atributos do modelo existente foram preservados;
+alterar esses atributos exige retreino e avaliação temporal.
+
+Available on `main`, originally developed on `codex/gnn-prototype`. This is a
+synthetic-data demonstration, not a model validated against real fraud.
+Rules remain the decision baseline; the GNN defaults to shadow mode.
 
 ## What was implemented
 
@@ -52,7 +75,9 @@ is loaded. The model SHA-256 is recorded in each saved analysis.
 | shadow (default) | Saves GNN assessment alongside the rule decision; final risk is unchanged |
 | contribute | Experimental opt-in: a GNN score >= 80 adds 20 graph points, capped by total score 100 |
 
-`metadata.rule_risk_score` records the baseline. `metadata.gnn.gnn_score` is the
+The default response shows only GNN mode, status, score and applied points.
+Use `?include_details=true` on POST or GET for the saved audit fields below.
+In that detailed view, `metadata.rule_risk_score` records the baseline. `metadata.gnn.gnn_score` is the
 network sigmoid output multiplied by 100. It is **uncalibrated** and must not be
 read as a probability of fraud. `proposed_points` is the graph group contribution;
 `applied_points` is the actual change in the final score after the global cap.
@@ -60,8 +85,8 @@ The original hard limits always win. Graph points cannot reduce risk or override
 a hard rejection. The graph group may correlate with existing rules; its 20-point
 cap limits impact but does not eliminate double counting or validate calibration.
 
-Contribute mode can change approval/2FA/rejection outcomes on this test branch.
-It records policy version `pix-score-v2+gnn-experimental-v1`. Shadow preserves the
+Contribute mode can change approval/2FA/rejection outcomes when explicitly enabled.
+It records policy version `pix-score-v5+gnn-experimental-v1`. Shadow preserves the
 rule policy version and result, while also recording graph configuration and model hash.
 Saved decisions remain immutable and retries never re-evaluate a model or mode.
 

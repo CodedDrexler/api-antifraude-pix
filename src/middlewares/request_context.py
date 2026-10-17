@@ -25,8 +25,30 @@ def register_request_middleware(app: FastAPI):
                 403, "PIX000403", "Forbidden", "Request must be internal", "Requisição precisa ser interna"
             )
         else:
-            response = await call_next(request)
+            try:
+                response = await call_next(request)
+            except Exception as exc:
+                # Exception text/tracebacks may contain SQL parameters, credentials or payloads.
+                logger.error(
+                    json.dumps(
+                        {
+                            "request_id": request_id,
+                            "event": "unhandled_error",
+                            "exception_type": type(exc).__name__,
+                        }
+                    )
+                )
+                response = error_response(
+                    500,
+                    "PIX000500",
+                    "Internal Server Error",
+                    "Unexpected internal error",
+                    "Falha interna; consulte o identificador da requisição",
+                )
         response.headers["X-Request-ID"] = request_id
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "no-referrer"
         route = request.scope.get("route")
         logger.info(
             json.dumps(

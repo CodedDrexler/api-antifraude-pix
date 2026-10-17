@@ -11,7 +11,9 @@ API_URL = os.environ.get("PIX_API_URL", "http://127.0.0.1:8000").rstrip("/")
 TOKEN = os.environ.get("INTERNAL_TOKEN", "default_token")
 
 
-def request(method, path, body=None, token=TOKEN):
+def request(method, path, body=None, token=TOKEN, *, include_details=False):
+    if include_details and path.startswith("/pix/transaction"):
+        path += "?include_details=true"
     headers = {"Content-Type": "application/json"}
     if token is not None:
         headers["INTERNAL-TOKEN"] = token
@@ -28,7 +30,11 @@ def request(method, path, body=None, token=TOKEN):
 
 @pytest.fixture
 def api():
-    return request
+    # Evidence-focused integration tests explicitly inspect the saved audit view.
+    def detailed_request(method, path, body=None, token=TOKEN):
+        return request(method, path, body, token, include_details=True)
+
+    return detailed_request
 
 
 @pytest.fixture

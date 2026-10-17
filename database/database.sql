@@ -6,6 +6,7 @@ CREATE TABLE pix_analysis (
     transaction_id VARCHAR(128) NOT NULL UNIQUE,
     payload_hash VARCHAR(64) NOT NULL,
     source_document VARCHAR(14) NOT NULL,
+    source_account_identity VARCHAR(64),
     destination_identity VARCHAR(64) NOT NULL,
     device_id VARCHAR(128) NOT NULL,
     amount BIGINT NOT NULL CHECK (amount > 0),
@@ -20,10 +21,12 @@ CREATE TABLE pix_analysis (
 CREATE INDEX ix_pix_payer_time ON pix_analysis (source_document, transaction_date);
 CREATE INDEX ix_pix_destination_time ON pix_analysis (destination_identity, transaction_date);
 CREATE INDEX ix_pix_device_time ON pix_analysis (device_id, transaction_date);
+CREATE INDEX ix_pix_account_received ON pix_analysis (source_account_identity, created_at);
 CREATE INDEX ix_pix_approved_profile ON pix_analysis (source_document, transaction_date)
     INCLUDE (amount, destination_identity, device_id) WHERE status = 'approved';
 
--- Decisions are final snapshots. Even direct SQL cannot replace past decisions.
+-- Protect snapshots against UPDATE/DELETE. A schema owner/superuser can bypass
+-- this control; use a separate runtime role with SELECT/INSERT only.
 CREATE FUNCTION reject_pix_history_mutation() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     RAISE EXCEPTION 'Pix history is immutable' USING ERRCODE = '23514';
