@@ -47,7 +47,6 @@ def main():
                     "synthetic_scenario": kind,
                     "synthetic_label": label,
                     "status": response["status"],
-                    "rule_risk_score": metadata["rule_risk_score"],
                     "risk_score": metadata["risk_score"],
                     "gnn": metadata["gnn"],
                 }

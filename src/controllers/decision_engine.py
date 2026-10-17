@@ -1,8 +1,10 @@
 from dataclasses import asdict
-from datetime import timedelta
 
 from src.constants import Policy
 from src.repositories.pix_repository import History
+from src.risk.rules import evaluate_rules
+from src.risk.types import RuleContext
+from src.risk_context import FACTOR_LABELS
 from src.schemas.pix import PixTransactionCreate
 
 
@@ -15,82 +17,28 @@ class DecisionEngine:
     def evaluate(self, transaction: PixTransactionCreate, history: History):
         p = self.policy
         scoring = p.scoring
-        age = transaction.transaction_date - transaction.source_account.opening_date
-        destination_age = transaction.transaction_date - transaction.destination_account.opening_date
+        context = RuleContext(transaction, history, p)
+        age = context.age
+        destination_age = context.destination_age
+        registered_count = context.registered_count
+        night = context.night
         rules = []
-
-        def add(code, group, observed, threshold, hard_limit=False):
+        for match in evaluate_rules(context):
+            factor = getattr(scoring.rule_factors, match.code)
+            weight = getattr(scoring.weights, match.code)
             rules.append(
                 {
-                    "code": code,
-                    "group": group,
-                    "weight": getattr(scoring.weights, code),
+                    "code": match.code,
+                    "group": factor,
+                    "risk_factor": factor,
+                    "weight": weight,
+                    "weighted_points": weight * getattr(scoring.factor_weights, factor) // 100,
                     "contribution": 0,
-                    "observed": observed,
-                    "threshold": threshold,
-                    "hard_limit": hard_limit,
+                    "observed": match.observed,
+                    "threshold": match.threshold,
+                    "hard_limit": match.hard_limit,
                 }
             )
-
-        if transaction.amount >= p.rejection_amount:
-            add("amount_above_rejection_limit", "exposure", transaction.amount, p.rejection_amount, True)
-        if history.recent_count >= p.velocity_limit:
-            add("velocity_above_limit", "activity", history.recent_count, p.velocity_limit, True)
-        if history.recent_amount + transaction.amount >= p.accumulated_amount:
-            add(
-                "accumulated_amount_above_limit",
-                "activity",
-                history.recent_amount + transaction.amount,
-                p.accumulated_amount,
-                True,
-            )
-        if transaction.amount >= p.two_factor_amount:
-            add("amount_requires_two_factor", "exposure", transaction.amount, p.two_factor_amount)
-        if age < timedelta(days=p.new_account_days):
-            add("new_source_account", "account", age.total_seconds(), p.new_account_days * 86400)
-        if (
-            not history.known_destination
-            and destination_age < timedelta(days=p.new_account_days)
-            and transaction.amount >= p.profile_min_amount
-        ):
-            add(
-                "new_destination_account",
-                "counterparty",
-                destination_age.total_seconds(),
-                p.new_account_days * 86400,
-            )
-        if (
-            history.approved_count >= p.destination_min_history
-            and not history.known_destination
-            and transaction.amount >= p.profile_min_amount
-        ):
-            add("unfamiliar_destination", "counterparty", False, True)
-        # Integer comparison avoids floating point money and averaging errors.
-        if (
-            history.approved_count >= p.profile_min_history
-            and transaction.amount >= p.profile_min_amount
-            and transaction.amount * history.approved_count >= history.approved_amount * p.profile_multiplier
-        ):
-            add(
-                "amount_above_customer_profile",
-                "profile",
-                {
-                    "amount": transaction.amount,
-                    "history_amount": history.approved_amount,
-                    "history_count": history.approved_count,
-                },
-                {
-                    "multiplier": p.profile_multiplier,
-                    "minimum_amount": p.profile_min_amount,
-                    "minimum_history": p.profile_min_history,
-                },
-            )
-        if (
-            history.approved_count >= p.device_min_history
-            and not history.known_device
-            and transaction.amount >= p.device_min_amount
-        ):
-            add("unfamiliar_device", "device", False, True)
 
         groups = {}
         for group, cap in asdict(scoring.group_caps).items():
@@ -99,8 +47,8 @@ class DecisionEngine:
                 continue
             remaining = cap
             # Largest signals consume the cap first; code breaks ties deterministically.
-            for rule in sorted(matches, key=lambda rule: (-rule["weight"], rule["code"])):
-                rule["contribution"] = min(rule["weight"], remaining)
+            for rule in sorted(matches, key=lambda rule: (-rule["weighted_points"], rule["code"])):
+                rule["contribution"] = min(rule["weighted_points"], remaining)
                 remaining -= rule["contribution"]
             groups[group] = {
                 "raw_score": sum(rule["weight"] for rule in matches),
@@ -116,6 +64,9 @@ class DecisionEngine:
             status, decision_source = "rejected", "hard_limit"
         elif risk_score >= scoring.rejection_threshold and group_count >= scoring.minimum_rejection_groups:
             status, decision_source = "rejected", "risk_score"
+        elif history.profile_count == 0:
+            status = "two_factor_required"
+            decision_source = "first_transaction" if registered_count == 0 else "insufficient_history"
         elif risk_score >= scoring.two_factor_threshold:
             status, decision_source = "two_factor_required", "risk_score"
         else:
@@ -129,10 +80,25 @@ class DecisionEngine:
         )
         return status, {
             "risk_score": risk_score,
+            "risk_factors_sum": grouped_score,
             "risk_level": risk_level,
             "score_semantics": "heuristic_not_probability",
             "raw_score": sum(rule["weight"] for rule in rules),
             "group_scores": groups,
+            "risk_factors": [
+                {
+                    "name": factor,
+                    "label": FACTOR_LABELS[factor],
+                    **values,
+                    "weight": getattr(scoring.factor_weights, factor),
+                    "weighted_score": sum(r["weighted_points"] for r in rules if r["risk_factor"] == factor),
+                    "rules": [r["code"] for r in rules if r["risk_factor"] == factor],
+                    "hard_limits": [
+                        r["code"] for r in rules if r["risk_factor"] == factor and r["hard_limit"]
+                    ],
+                }
+                for factor, values in groups.items()
+            ],
             "score_cap_reduction": grouped_score - risk_score,
             "risk_group_count": group_count,
             "triggered_rules": rules,
@@ -144,8 +110,29 @@ class DecisionEngine:
             "recent_amount": history.recent_amount,
             "source_account_age_days": age.days,
             "destination_account_age_days": destination_age.days,
-            "profile_transactions": history.approved_count,
-            "profile_amount": history.approved_amount,
+            "profile_transactions": history.profile_count,
+            "registered_transactions": registered_count,
+            "profile_basis": history.profile_basis,
+            "profile_amount": history.profile_amount,
+            "profile_average": history.profile_amount / history.profile_count
+            if history.profile_count
+            else None,
+            "profile_limit": (
+                history.profile_amount * p.profile_multiplier / history.profile_count
+                if history.profile_count
+                else None
+            ),
+            "approved_transactions": history.approved_count,
             "known_destination": history.known_destination,
             "known_device": history.known_device,
+            "device_owner_count": history.device_other_owners + 1,
+            "payer_device_count": history.payer_other_devices + 1,
+            "device_window_hours": p.device_window_hours,
+            "access_context": {
+                "channel": transaction.source.channel,
+                "is_night": night,
+                "timezone": "UTC-03:00",
+                "approved_night_transactions": history.approved_night_count,
+                "regulatory_limits_checked": False,
+            },
         }

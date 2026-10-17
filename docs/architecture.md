@@ -28,7 +28,9 @@ src/app.py                     registro explícito das rotas e composição
 src/middlewares/               token, request ID e log
 src/schemas/                   formato e normalização da entrada
 src/resources/                 fronteira HTTP
-src/controllers/               fluxo, política e commit
+src/controllers/               fluxo, agregação do score e commit
+src/risk/rules/                regras puras separadas por fator de risco
+src/risk/types.py              contexto de avaliação e sinais encontrados
 src/repositories/              consultas, travas e escrita
 src/models/                    mapeamento das tabelas
 src/dtos/                      resposta pública
@@ -38,10 +40,17 @@ database/database.sql          criação e restrições do PostgreSQL
 
 O `DecisionEngine` é uma política pura chamada pelo controller. Recebe uma
 transação e um resumo do histórico, sem abrir conexões ou conhecer HTTP.
+As regras de `activity`, `exposure`, `account`, `counterparty`, `profile`,
+`device` e `access_context` ficam em módulos próprios de `src/risk/rules/`.
+Cada função recebe um `RuleContext` e produz `RuleMatch` com código, observação,
+limiar e indicação de limite forte. O registro explícito em `rules/__init__.py`
+preserva a ordem dos motivos. As regras não consultam o banco nem calculam pontos.
+O `DecisionEngine` concentra pesos configuráveis, tetos, prioridades e a resposta.
+O GNN continua em `src/gnn/`, com contribuição aplicada depois do score das regras.
 O controller obtém o histórico pelo repository e escolhe quando confirmar a escrita.
 O resource devolve exclusivamente `key`, `status` e `metadata`.
 
-A política atual `pix-score-v2` usa contribuições por regra, tetos por grupo,
+A política atual `pix-score-v5` usa contribuições por regra, tetos por grupo,
 faixas de score e limites fortes explícitos. A [pesquisa e o cálculo completo](risk-scoring.md)
 detalham o racional. O score usa o mesmo retrato de histórico obtido dentro da
 transação protegida pelas travas existentes. Análises antigas mantêm seu conteúdo;
@@ -88,11 +97,18 @@ O volume `pix_data` mantém a história ao recriar a API. O SQL inicial executa
 somente em um banco novo. Para evoluir um banco com dados, escreva e aplique um
 script incremental revisado. Não apague volumes para atualizar uma instalação.
 
+A v5 adiciona `source_account_identity` e um índice por conta/recepção, com
+migração aditiva 004. O acumulado lê os incrementos das decisões imutáveis nos
+últimos 24 h de `created_at`, sem reinterpretar registros antigos ou somar o
+score acumulado anterior. As travas existentes tornam o incremento atômico.
+O aviso ao banco é somente um campo na metadata, sem comunicação externa.
+Detalhes e evidência de avaliação estão em [account-untrust.md](account-untrust.md).
+
 ## Fluxo e concorrência
 
 1. Middleware gera request ID e verifica token antes de qualquer acesso ao banco.
 2. Schema valida tipos, centavos inteiros, datas com fuso, IP e coordenadas.
-3. Controller solicita duas travas de transação PostgreSQL: ID do Pix e documento do pagador.
+3. Controller solicita travas de transação PostgreSQL por ID do Pix, documento do pagador e aparelho.
 4. Repository busca o ID. Mesmo conteúdo devolve o resultado original; conteúdo diferente gera 409.
 5. Repository calcula o histórico por tempo do evento; o motor avalia todas as regras.
 6. Repository insere pedido e decisão juntos. Controller faz commit antes da resposta 200.
@@ -102,7 +118,9 @@ As travas usam SHA-256 com redução para 64 bits e ordem numérica fixa. Colis�
 podem serializar pagadores independentes, mas não mudam resultados. A trava por
 ID também protege a disputa entre dois pagadores usando o mesmo ID. A trava por
 documento impede que seis Pix simultâneos leiam o mesmo contador antigo, inclusive
-em processos ou réplicas diferentes. O isolamento é READ COMMITTED: cada leitura
+em processos ou réplicas diferentes. A trava por aparelho serializa titulares
+diferentes usando o mesmo device_id, protegendo a contagem de compartilhamento.
+O isolamento é READ COMMITTED: cada leitura
 após obter a trava enxerga os commits anteriores. A API não depende de locks Python.
 
 A transação pode esperar até 4 s por uma trava; cada comando SQL tem timeout de 5 s.
@@ -130,8 +148,10 @@ Para uso real, timestamps confiáveis, controle de atraso e resultados de fraude
 seriam necessários antes de calibrar o motor.
 
 Todos os pedidos válidos inéditos contam para velocity e montante, inclusive
-reprovados ou com 2FA: representam tentativas. Só decisões `approved` formam o
-perfil e a familiaridade, uma aproximação local de confiança. Sem feedback de
+reprovados ou com 2FA: representam tentativas. Aprovações formam o perfil de
+valores e a familiaridade. Sem aprovações, a primeira tentativa pendente oferece
+uma referência provisória de valor; outras pendências não a elevam. O perfil
+registra essa origem explicitamente. Sem feedback de
 fraude confirmada, esse perfil também pode ser contaminado. Mudanças de conta,
 dispositivo e horário precisam ser calibradas com dados rotulados.
 

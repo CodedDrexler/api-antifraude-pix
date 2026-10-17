@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src ./src
 COPY models ./models
+COPY config ./config
 
 FROM base AS gnn-training
 COPY requirements-gnn.txt .

@@ -12,6 +12,8 @@ from pydantic import (
     model_validator,
 )
 
+from src.schemas.pix_examples import PIX_REQUEST_EXAMPLE
+
 Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=128)]
 
 
@@ -34,7 +36,12 @@ class InputModel(BaseModel):
 
 
 class AccountOwner(InputModel):
-    document_number: str = Field(min_length=11, max_length=18)
+    document_number: str = Field(
+        min_length=11,
+        max_length=18,
+        examples=["123.456.789-09", "12.345.678/0001-90"],
+        description="CPF ou CNPJ; aceita pontuação e normaliza para dígitos.",
+    )
 
     @field_validator("document_number")
     @classmethod
@@ -48,33 +55,56 @@ class AccountOwner(InputModel):
 
 
 class Account(InputModel):
-    participant: str | None = Field(default=None, pattern=r"^[0-9]{8}$")
-    branch: Text
-    account_number: Text
-    opening_date: AwareDatetime
+    participant: str | None = Field(default=None, pattern=r"^[0-9]{8}$", examples=["60701190"])
+    branch: Text = Field(examples=["0001"])
+    account_number: Text = Field(examples=["88213"])
+    opening_date: AwareDatetime = Field(examples=["2025-03-02T10:00:00-03:00"])
     owner: AccountOwner
 
 
 class DestinationAccount(Account):
-    participant: str = Field(pattern=r"^[0-9]{8}$")
+    participant: str = Field(pattern=r"^[0-9]{8}$", examples=["60701190"])
 
 
 class Geolocation(InputModel):
-    latitude: float = Field(strict=True, ge=-90, le=90, allow_inf_nan=False)
-    longitude: float = Field(strict=True, ge=-180, le=180, allow_inf_nan=False)
+    latitude: float = Field(strict=True, ge=-90, le=90, allow_inf_nan=False, examples=[-23.56])
+    longitude: float = Field(strict=True, ge=-180, le=180, allow_inf_nan=False, examples=[-46.65])
 
 
 class PixSource(InputModel):
-    device_id: Text
-    channel: Text
-    ip: IPvAnyAddress
+    device_id: Text = Field(examples=["dvc-9f2c71a8"])
+    channel: Text = Field(
+        examples=["app", "internet_banking"],
+        description=(
+            "Canal informado pelo integrador: app para aplicativo móvel; internet_banking para navegador/PC. "
+            "Outros canais são aceitos. O sinal contextual noturno avalia somente app (sem distinguir maiúsculas). "
+            "Isso não dispensa os limites noturnos bancários nos demais canais."
+        ),
+    )
+    ip: IPvAnyAddress = Field(examples=["198.51.100.23"])
     geolocation: Geolocation | None = None
 
 
 class PixTransactionCreate(InputModel):
-    id: str = Field(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9_.:-]+$")
-    amount: int = Field(strict=True, gt=0, le=9_223_372_036_854_775_807)
-    transaction_date: AwareDatetime
+    model_config = ConfigDict(
+        json_schema_extra={"examples": [PIX_REQUEST_EXAMPLE]},
+    )
+
+    id: str = Field(
+        min_length=1,
+        max_length=128,
+        pattern=r"^[A-Za-z0-9_.:-]+$",
+        examples=["pix-000123"],
+        description="Identificador único. Use um novo ID ao alterar o conteúdo ou testar outra análise.",
+    )
+    amount: int = Field(
+        strict=True,
+        gt=0,
+        le=9_223_372_036_854_775_807,
+        examples=[150_000],
+        description="Valor em centavos: 150000 corresponde a R$ 1.500,00.",
+    )
+    transaction_date: AwareDatetime = Field(examples=["2026-10-17T22:15:00-03:00"])
     source_account: Account
     destination_account: DestinationAccount
     source: PixSource

@@ -6,6 +6,7 @@ from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session
 
 from src.constants import Policy
+from src.controllers.account_untrust import UntrustHistory
 from src.models.pix import PixAnalysis
 from src.schemas.pix import PixTransactionCreate
 
@@ -18,17 +19,24 @@ class History:
     approved_amount: int
     known_destination: bool
     known_device: bool
+    profile_count: int = 0
+    profile_amount: int = 0
+    registered_count: int | None = None
+    profile_basis: str = "provided_history"
+    device_other_owners: int = 0
+    payer_other_devices: int = 0
+    approved_night_count: int = 0
 
 
 class PixRepository:
     def __init__(self, session: Session):
         self.session = session
 
-    def lock(self, transaction_id: str, document: str):
+    def lock(self, transaction_id: str, document: str, device_id: str):
         # Stable across processes. Ordering prevents cycles between lock keys.
         keys = {
             int.from_bytes(sha256(value.encode()).digest()[:8], "big", signed=True)
-            for value in ("transaction:" + transaction_id, "payer:" + document)
+            for value in ("transaction:" + transaction_id, "payer:" + document, "device:" + device_id)
         }
         for key in sorted(keys):
             self.session.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": key})
@@ -54,9 +62,55 @@ class PixRepository:
             PixAnalysis.transaction_date >= at - timedelta(days=policy.profile_days),
             PixAnalysis.transaction_date <= at,
         )
-        profile_count, profile_amount = self.session.execute(
-            select(func.count(), func.coalesce(func.sum(PixAnalysis.amount), 0)).where(*approved)
+        local_hour = func.extract("hour", func.timezone("Etc/GMT+3", PixAnalysis.transaction_date))
+        night_condition = or_(local_hour >= policy.night_start_hour, local_hour < policy.night_end_hour)
+        approved_count, approved_amount, night_count = self.session.execute(
+            select(
+                func.count(),
+                func.coalesce(func.sum(PixAnalysis.amount), 0),
+                func.count().filter(night_condition),
+            ).where(*approved)
         ).one()
+        registered_count = self.session.scalar(
+            select(func.count()).where(payer, PixAnalysis.transaction_date <= at)
+        )
+        # Rejected/pending attempts must not raise an established amount baseline.
+        # Until the first approval, one initial pending request bootstraps the demo.
+        amounts = self.session.scalars(
+            select(PixAnalysis.amount)
+            .where(payer, PixAnalysis.status == "approved", PixAnalysis.transaction_date <= at)
+            .order_by(PixAnalysis.transaction_date.desc(), PixAnalysis.id.desc())
+            .limit(policy.profile_history_size)
+        ).all()
+        profile_basis = "approved" if amounts else "unavailable"
+        if not amounts:
+            bootstrap = self.session.scalar(
+                select(PixAnalysis.amount)
+                .where(payer, PixAnalysis.status == "two_factor_required", PixAnalysis.transaction_date <= at)
+                .order_by(PixAnalysis.transaction_date, PixAnalysis.id)
+                .limit(1)
+            )
+            if bootstrap is not None:
+                amounts = [bootstrap]
+                profile_basis = "initial_pending_attempt"
+        device_window = (
+            PixAnalysis.transaction_date >= at - timedelta(hours=policy.device_window_hours),
+            PixAnalysis.transaction_date <= at,
+        )
+        other_owners = self.session.scalar(
+            select(func.count(func.distinct(PixAnalysis.source_document))).where(
+                *device_window,
+                PixAnalysis.device_id == transaction.source.device_id,
+                PixAnalysis.source_document != transaction.source_account.owner.document_number,
+            )
+        )
+        other_devices = self.session.scalar(
+            select(func.count(func.distinct(PixAnalysis.device_id))).where(
+                *device_window,
+                payer,
+                PixAnalysis.device_id != transaction.source.device_id,
+            )
+        )
         known_destination = (
             self.session.scalar(
                 select(PixAnalysis.id)
@@ -74,7 +128,19 @@ class PixRepository:
             is not None
         )
         return History(
-            count, int(amount), profile_count, int(profile_amount), known_destination, known_device
+            recent_count=count,
+            recent_amount=int(amount),
+            approved_count=approved_count,
+            approved_amount=int(approved_amount),
+            known_destination=known_destination,
+            known_device=known_device,
+            profile_count=len(amounts),
+            profile_amount=sum(amounts),
+            registered_count=registered_count,
+            profile_basis=profile_basis,
+            device_other_owners=other_owners,
+            payer_other_devices=other_devices,
+            approved_night_count=night_count,
         )
 
     def create(self, **values) -> PixAnalysis:
@@ -82,6 +148,17 @@ class PixRepository:
         self.session.add(analysis)
         self.session.flush()
         return analysis
+
+    def untrust_history(self, account_identity, at, hours):
+        increment = PixAnalysis.decision_metadata["account_untrust"]["increment"].as_integer()
+        points, events = self.session.execute(
+            select(func.coalesce(func.sum(increment), 0), func.count().filter(increment > 0)).where(
+                PixAnalysis.source_account_identity == account_identity,
+                PixAnalysis.created_at > at - timedelta(hours=hours),
+                PixAnalysis.created_at <= at,
+            )
+        ).one()
+        return UntrustHistory(int(points), events)
 
     def graph_history(self, transaction, destination, limit=300, days=30):
         at = transaction.transaction_date
