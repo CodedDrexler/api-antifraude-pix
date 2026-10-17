@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from hashlib import sha256
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session
 
 from src.constants import Policy
@@ -82,3 +82,23 @@ class PixRepository:
         self.session.add(analysis)
         self.session.flush()
         return analysis
+
+    def graph_history(self, transaction, destination, limit=300, days=30):
+        at = transaction.transaction_date
+        related = or_(
+            PixAnalysis.source_document == transaction.source_account.owner.document_number,
+            PixAnalysis.destination_identity == destination,
+            PixAnalysis.device_id == transaction.source.device_id,
+        )
+        rows = self.session.scalars(
+            select(PixAnalysis.payload)
+            .where(
+                related,
+                PixAnalysis.transaction_date >= at - timedelta(days=days),
+                PixAnalysis.transaction_date <= at,
+            )
+            .order_by(PixAnalysis.transaction_date.desc(), PixAnalysis.id.desc())
+            .limit(limit + 1)
+        ).all()
+        # Refuse an incomplete graph instead of treating a truncated neighborhood as complete.
+        return list(rows[:limit]), len(rows) > limit

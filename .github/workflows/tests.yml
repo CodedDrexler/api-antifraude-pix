@@ -1,0 +1,31 @@
+name: API and GNN prototype tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start API and PostgreSQL
+        run: docker compose up --build --wait api
+      - name: Build tests
+        run: docker compose --profile test build tests
+      - name: Test API, graph features, model and score integration
+        run: docker compose --profile test run --rm --no-deps tests
+      - name: Check Python formatting and imports
+        run: |
+          docker compose --profile test run --rm --no-deps tests ruff check src tests scripts
+          docker compose --profile test run --rm --no-deps tests ruff format --check src tests scripts
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs --tail=100
+      - name: Stop containers
+        if: always()
+        run: docker compose down

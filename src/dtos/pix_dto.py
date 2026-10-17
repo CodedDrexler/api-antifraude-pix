@@ -32,6 +32,8 @@ class PixAnalysisDTO(BaseModel):
             "Saved decision evidence. Policy pix-score-v2 includes risk_score (0..100 heuristic points), "
             "risk_level, triggered_rules with weights and effective contributions, group_scores, "
             "hard_limits and the complete policy snapshot. Earlier pix-v1 analyses remain unchanged."
+            " Experimental GNN builds also include rule_risk_score and gnn: mode, status, "
+            "gnn_score, proposed_points, applied_points, model version/hash and synthetic training flag."
         )
     )
 
