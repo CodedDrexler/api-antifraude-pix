@@ -16,7 +16,7 @@ class PixAnalysisDTO(BaseModel):
                         "risk_score": 30,
                         "risk_level": "elevated",
                         "decision_source": "first_transaction",
-                        "policy_version": "pix-score-v5",
+                        "policy_version": "pix-score-v6",
                         "processing_time_ms": 8.412,
                         "risk_factors_sum": 30,
                         "account_untrust": {
@@ -103,6 +103,8 @@ class PixAnalysisDTO(BaseModel):
                 for factor in factors
             ],
         )
+        if "duplicate_payment" in evidence:
+            summary["duplicate_payment"] = evidence["duplicate_payment"]
         if evidence.get("hard_limits"):
             summary["hard_limits"] = evidence["hard_limits"]
         if "account_untrust" in evidence:

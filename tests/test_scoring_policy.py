@@ -36,7 +36,7 @@ def test_score_boundaries_and_single_group_rejection_guard(payload, points, expe
         {"rejection_threshold": 101},
         {"two_factor_threshold": 80},
         {"minimum_rejection_groups": 0},
-        {"minimum_rejection_groups": 8},
+        {"minimum_rejection_groups": 9},
         {"rejection_threshold": True},
         {"weights": replace(RuleWeights(), unfamiliar_device=-1)},
         {"weights": replace(RuleWeights(), unfamiliar_device=101)},

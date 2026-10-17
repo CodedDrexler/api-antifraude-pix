@@ -5,7 +5,7 @@
     "risk_score": 0,
     "risk_level": "low",
     "decision_source": "account_untrust",
-    "policy_version": "pix-score-v5",
+    "policy_version": "pix-score-v6",
     "processing_time_ms": 9.075,
     "risk_factors_sum": 0,
     "risk_factors": [],

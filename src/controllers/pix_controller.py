@@ -49,7 +49,9 @@ class PixController:
         # Capture server time after serialization locks. Caller event timestamps
         # cannot rewind the accumulation window or erase earlier attempts.
         received_at = datetime.now(timezone.utc)
-        history = self.repository.history(transaction, destination_identity, self.engine.policy)
+        history = self.repository.history(
+            transaction, destination_identity, self.engine.policy, account_identity
+        )
         status, metadata = self.engine.evaluate(transaction, history)
         baseline = metadata
         graph_history, truncated = [], False

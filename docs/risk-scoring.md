@@ -1,6 +1,6 @@
 # Política de risco e evidências
 
-Política `pix-score-v5`. Fontes consultadas em 17/10/2026.
+Política `pix-score-v6`. Fontes consultadas em 17/10/2026.
 Os pontos são parâmetros demonstrativos do projeto, sem calibração em fraude real.
 
 ## Decisão
@@ -29,6 +29,7 @@ não executa autenticação nem liquidação.
 |---|---|---|
 | `first_transaction` | Nenhuma tentativa anterior do pagador | 30 / exposure |
 | `insufficient_amount_history` | Há tentativas, mas nenhuma referência elegível | 30 / exposure |
+| `possible_duplicate_payment` | Mesma conta de origem, destinatário e valor em até 120 s, com outro ID | 30 / duplication |
 | `velocity_above_limit` | Cinco tentativas anteriores em 10 min | 80 / activity; forte |
 | `accumulated_amount_above_limit` | Soma das tentativas em 10 min + atual ≥ R$ 30 mil | 80 / activity; forte |
 | `new_source_account` | Conta de origem com menos de 7 dias | 15 / account |
@@ -44,6 +45,7 @@ não executa autenticação nem liquidação.
 |---|---|---|
 | exposure | Histórico inicial | 80 |
 | activity | Volume e frequência | 80 |
+| duplication | Possível Pix duplicado | 30 |
 | account | Idade da conta de origem | 15 |
 | counterparty | Destinatário | 25 |
 | profile | Perfil de valores | 80 |
@@ -57,9 +59,20 @@ explicam os fatores ao usuário. `graph` tem vínculo fixo à regra
 
 ## O que cada histórico representa
 
-Todas as consultas usam o documento normalizado do pagador e o tempo do evento.
+As consultas por pagador usam o documento normalizado e o tempo do evento.
 Eventos futuros ficam fora; timestamps iguais incluem tentativas recebidas antes.
 Repetir um ID não acrescenta observações. Eventos atrasados não alteram decisões salvas.
+
+- **Possível duplicidade:** mesma identidade de conta de origem e de destino,
+  mesmo valor em centavos e ID diferente, na janela inclusiva `[evento − 120 s, evento]`.
+  A janela é configurável por `duplicate_window_seconds`, um inteiro positivo.
+  Apenas análises `approved` ou `two_factor_required` são elegíveis; não comprovam
+  pagamento ou liquidação. A tentativa mais recente é informada em `duplicate_payment`,
+  inclusive na resposta resumida. Trocar aparelho ou data de abertura não altera
+  a identidade da conta. As travas por pagador serializam tentativas simultâneas.
+  Registros antigos sem `source_account_identity` não entram nessa comparação.
+  O fator próprio tem teto de 30 e peso configurável; isoladamente pede 2FA no padrão.
+  Não é limite forte e não integra os fatores elegíveis de `account_untrust`.
 
 - **Frequência e montante:** todas as tentativas válidas nos últimos 10 minutos,
   inclusive rejeições e pendências. O valor atual entra no montante.
@@ -156,6 +169,9 @@ horário do servidor, 2FA a partir de 40 e indicação de aviso a partir de 60.
 Não é somado ao `risk_score`. O bloqueio pelo acumulado fica desativado no padrão,
 conforme a comparação sintética de efeitos adversos. Consulte a
 [política de desconfiança por conta](account-untrust.md) para cálculo e avaliação.
+
+A v6 acrescenta a detecção de possível Pix duplicado. Decisões já salvas mantêm
+seu resultado e sua versão, inclusive nos reenvios do mesmo ID.
 
 ## Pesquisa e validação
 

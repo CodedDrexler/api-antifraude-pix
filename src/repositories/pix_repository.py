@@ -26,6 +26,8 @@ class History:
     device_other_owners: int = 0
     payer_other_devices: int = 0
     approved_night_count: int = 0
+    duplicate_transaction_id: str | None = None
+    duplicate_elapsed_seconds: float | None = None
 
 
 class PixRepository:
@@ -44,7 +46,9 @@ class PixRepository:
     def get(self, transaction_id: str) -> PixAnalysis | None:
         return self.session.scalar(select(PixAnalysis).where(PixAnalysis.transaction_id == transaction_id))
 
-    def history(self, transaction: PixTransactionCreate, destination: str, policy: Policy) -> History:
+    def history(
+        self, transaction: PixTransactionCreate, destination: str, policy: Policy, source_account: str
+    ) -> History:
         at = transaction.transaction_date
         payer = PixAnalysis.source_document == transaction.source_account.owner.document_number
         # Future event timestamps never influence an earlier event.
@@ -127,6 +131,22 @@ class PixRepository:
             )
             is not None
         )
+        # Distinct IDs only: replays have already returned in the controller.
+        # Rejections do not suggest that a previous payment might have succeeded.
+        duplicate = self.session.execute(
+            select(PixAnalysis.transaction_id, PixAnalysis.transaction_date)
+            .where(
+                PixAnalysis.source_account_identity == source_account,
+                PixAnalysis.destination_identity == destination,
+                PixAnalysis.amount == transaction.amount,
+                PixAnalysis.status.in_(("approved", "two_factor_required")),
+                PixAnalysis.transaction_id != transaction.id,
+                PixAnalysis.transaction_date >= at - timedelta(seconds=policy.duplicate_window_seconds),
+                PixAnalysis.transaction_date <= at,
+            )
+            .order_by(PixAnalysis.transaction_date.desc(), PixAnalysis.id.desc())
+            .limit(1)
+        ).first()
         return History(
             recent_count=count,
             recent_amount=int(amount),
@@ -141,6 +161,10 @@ class PixRepository:
             device_other_owners=other_owners,
             payer_other_devices=other_devices,
             approved_night_count=night_count,
+            duplicate_transaction_id=duplicate.transaction_id if duplicate else None,
+            duplicate_elapsed_seconds=(at - duplicate.transaction_date).total_seconds()
+            if duplicate
+            else None,
         )
 
     def create(self, **values) -> PixAnalysis:

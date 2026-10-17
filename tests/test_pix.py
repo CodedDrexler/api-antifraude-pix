@@ -69,7 +69,7 @@ def test_all_reasons_and_rejection_priority(api, payload):
 
 def test_sixth_attempt_is_rejected_and_rejections_are_saved(api, payload):
     for index in range(5):
-        assert post(api, new_transaction(payload))["status"] == (
+        assert post(api, new_transaction(payload, amount=payload["amount"] + index + 1))["status"] == (
             "two_factor_required" if index == 0 else "approved"
         )
     rejected = post(api, payload)
@@ -256,7 +256,7 @@ def test_concurrent_retries_share_one_analysis(api, payload):
 
 
 def test_concurrent_distinct_pix_cannot_bypass_velocity(api, payload):
-    transactions = [new_transaction(payload) for _ in range(6)]
+    transactions = [new_transaction(payload, amount=payload["amount"] + index) for index in range(6)]
     with ThreadPoolExecutor(max_workers=6) as pool:
         results = list(pool.map(lambda body: post(api, body), transactions))
     assert sum(result["status"] == "approved" for result in results) == 4

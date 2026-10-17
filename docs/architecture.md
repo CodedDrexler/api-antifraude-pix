@@ -40,17 +40,21 @@ database/database.sql          criação e restrições do PostgreSQL
 
 O `DecisionEngine` é uma política pura chamada pelo controller. Recebe uma
 transação e um resumo do histórico, sem abrir conexões ou conhecer HTTP.
-As regras de `activity`, `exposure`, `account`, `counterparty`, `profile`,
+As regras de `activity`, `duplication`, `exposure`, `account`, `counterparty`, `profile`,
 `device` e `access_context` ficam em módulos próprios de `src/risk/rules/`.
 Cada função recebe um `RuleContext` e produz `RuleMatch` com código, observação,
-limiar e indicação de limite forte. O registro explícito em `rules/__init__.py`
+limiar e indicação de limite forte. O registro explícito em `src/risk/registry.py`
 preserva a ordem dos motivos. As regras não consultam o banco nem calculam pontos.
 O `DecisionEngine` concentra pesos configuráveis, tetos, prioridades e a resposta.
 O GNN continua em `src/gnn/`, com contribuição aplicada depois do score das regras.
 O controller obtém o histórico pelo repository e escolhe quando confirmar a escrita.
 O resource devolve exclusivamente `key`, `status` e `metadata`.
 
-A política atual `pix-score-v5` usa contribuições por regra, tetos por grupo,
+Os diretórios Python usam namespace packages do Python 3.12, sem `__init__.py`.
+O código importa módulos explicitamente; o registro de regras fica em
+`src/risk/registry.py`, sem inicialização implícita de pacotes.
+
+A política atual `pix-score-v6` usa contribuições por regra, tetos por grupo,
 faixas de score e limites fortes explícitos. A [pesquisa e o cálculo completo](risk-scoring.md)
 detalham o racional. O score usa o mesmo retrato de histórico obtido dentro da
 transação protegida pelas travas existentes. Análises antigas mantêm seu conteúdo;

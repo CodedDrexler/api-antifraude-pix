@@ -1,10 +1,20 @@
 """Explicit factor order preserves the audit order of triggered rules."""
 
-from src.risk.rules import access_context, account, activity, counterparty, device, exposure, profile
+from src.risk.rules import (
+    access_context,
+    account,
+    activity,
+    counterparty,
+    device,
+    duplication,
+    exposure,
+    profile,
+)
 from src.risk.types import RuleContext, RuleMatch
 
 EVALUATORS = (
     activity.evaluate,
+    duplication.evaluate,
     exposure.evaluate,
     account.evaluate,
     counterparty.evaluate,

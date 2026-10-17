@@ -86,7 +86,7 @@ a hard rejection. The graph group may correlate with existing rules; its 20-poin
 cap limits impact but does not eliminate double counting or validate calibration.
 
 Contribute mode can change approval/2FA/rejection outcomes when explicitly enabled.
-It records policy version `pix-score-v5+gnn-experimental-v1`. Shadow preserves the
+It records policy version `pix-score-v6+gnn-experimental-v1`. Shadow preserves the
 rule policy version and result, while also recording graph configuration and model hash.
 Saved decisions remain immutable and retries never re-evaluate a model or mode.
 

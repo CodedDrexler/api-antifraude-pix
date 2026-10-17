@@ -5,6 +5,7 @@ from datetime import timedelta, timezone
 BRASILIA = timezone(timedelta(hours=-3), "UTC-03:00")
 
 FACTOR_LABELS = {
+    "duplication": "Possível Pix duplicado",
     "exposure": "Histórico inicial",
     "activity": "Volume e frequência",
     "account": "Idade da conta de origem",

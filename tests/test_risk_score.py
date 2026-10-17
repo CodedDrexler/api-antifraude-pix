@@ -10,7 +10,7 @@ def score(api, payload):
     decision = post(api, payload)
     m = decision["metadata"]
     assert type(m["risk_score"]) is int and 0 <= m["risk_score"] <= 100
-    assert m["policy"]["version"] == "pix-score-v5"
+    assert m["policy"]["version"] == "pix-score-v6"
     assert m["score_semantics"] == "heuristic_not_probability"
     assert sum(rule["weight"] for rule in m["triggered_rules"]) == m["raw_score"]
     assert sum(f["score"] for f in m["risk_factors"]) == m["risk_factors_sum"]
@@ -109,8 +109,8 @@ def test_factor_sum_can_exceed_final_score_cap(api, payload):
 
 
 def test_activity_group_cap_preserves_all_hard_reasons(api, payload):
-    for _ in range(5):
-        post(api, new_transaction(payload, amount=600_000))
+    for index in range(5):
+        post(api, new_transaction(payload, amount=600_000 + index))
     decision = score(api, payload)
     assert decision["metadata"]["risk_score"] == 80
     assert set(decision["metadata"]["hard_limits"]) == {

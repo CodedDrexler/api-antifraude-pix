@@ -1,5 +1,5 @@
 {
-  "version": "pix-score-v5",
+  "version": "pix-score-v6",
   "velocity_minutes": 10,
   "velocity_limit": 5,
   "accumulated_amount": 3000000,
@@ -45,7 +45,8 @@
       "shared_device": 30,
       "multiple_devices": 20,
       "unusual_night_app": 15,
-      "insufficient_amount_history": 30
+      "insufficient_amount_history": 30,
+      "possible_duplicate_payment": 30
     },
     "group_caps": {
       "exposure": 80,
@@ -54,7 +55,8 @@
       "counterparty": 25,
       "profile": 80,
       "device": 40,
-      "access_context": 15
+      "access_context": 15,
+      "duplication": 30
     },
     "factor_weights": {
       "exposure": 100,
@@ -64,7 +66,8 @@
       "profile": 100,
       "device": 100,
       "graph": 100,
-      "access_context": 100
+      "access_context": 100,
+      "duplication": 100
     },
     "rule_factors": {
       "velocity_above_limit": "activity",
@@ -78,7 +81,9 @@
       "shared_device": "device",
       "multiple_devices": "device",
       "unusual_night_app": "access_context",
-      "insufficient_amount_history": "exposure"
+      "insufficient_amount_history": "exposure",
+      "possible_duplicate_payment": "duplication"
     }
-  }
+  },
+  "duplicate_window_seconds": 120
 }

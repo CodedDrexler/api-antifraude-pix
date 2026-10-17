@@ -18,6 +18,7 @@ class RuleWeights:
     multiple_devices: int = 20
     unusual_night_app: int = 15
     insufficient_amount_history: int = 30
+    possible_duplicate_payment: int = 30
 
 
 @dataclass(frozen=True)
@@ -29,6 +30,7 @@ class GroupCaps:
     profile: int = 80
     device: int = 40
     access_context: int = 15
+    duplication: int = 30
 
 
 @dataclass(frozen=True)
@@ -43,6 +45,7 @@ class FactorWeights:
     device: int = 100
     graph: int = 100
     access_context: int = 100
+    duplication: int = 100
 
 
 @dataclass(frozen=True)
@@ -59,6 +62,7 @@ class RuleFactors:
     multiple_devices: str = "device"
     unusual_night_app: str = "access_context"
     insufficient_amount_history: str = "exposure"
+    possible_duplicate_payment: str = "duplication"
 
 
 @dataclass(frozen=True)
@@ -121,7 +125,8 @@ class UntrustPolicy:
 
 @dataclass(frozen=True)
 class Policy:
-    version: str = "pix-score-v5"
+    version: str = "pix-score-v6"
+    duplicate_window_seconds: int = 120
     velocity_minutes: int = 10
     velocity_limit: int = 5
     accumulated_amount: int = 3_000_000

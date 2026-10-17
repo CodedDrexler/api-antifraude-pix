@@ -2,7 +2,7 @@ from dataclasses import asdict
 
 from src.constants import Policy
 from src.repositories.pix_repository import History
-from src.risk.rules import evaluate_rules
+from src.risk.registry import evaluate_rules
 from src.risk.types import RuleContext
 from src.risk_context import FACTOR_LABELS
 from src.schemas.pix import PixTransactionCreate
@@ -79,6 +79,19 @@ class DecisionEngine:
             else "low"
         )
         return status, {
+            **(
+                {
+                    "duplicate_payment": {
+                        "message": "Possível pagamento duplicado: existe uma tentativa recente com o mesmo valor para este destinatário.",
+                        "previous_transaction_id": history.duplicate_transaction_id,
+                        "elapsed_seconds": history.duplicate_elapsed_seconds,
+                        "window_seconds": p.duplicate_window_seconds,
+                        "previous_payment_confirmed": False,
+                    }
+                }
+                if history.duplicate_transaction_id
+                else {}
+            ),
             "risk_score": risk_score,
             "risk_factors_sum": grouped_score,
             "risk_level": risk_level,

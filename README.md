@@ -2,7 +2,7 @@
 
 API que analisa um Pix e responde `approved`, `two_factor_required` ou `rejected`,
 com score explicável e histórico em PostgreSQL. O score é heurístico (0 a 100),
-sem interpretação de porcentagem de fraude. Política atual: `pix-score-v5`.
+sem interpretação de porcentagem de fraude. Política atual: `pix-score-v6`.
 
 **Integrantes:** Vinícius Guimarães Drexler, Wallace Dametto Teixeira
 
@@ -114,6 +114,14 @@ Conteúdo diferente com o mesmo ID retorna 409. Payload inválido: 400; token au
 ou incorreto: 403; ID inexistente: 404; banco indisponível ou timeout: 503.
 Repetir após 503 deve usar o mesmo ID. Análises antigas conservam sua política.
 
+**Possível Pix duplicado:** outro ID com a mesma conta de origem, destinatário
+e valor em até 120 segundos aciona `possible_duplicate_payment` (+30 pontos no
+fator `duplication`). No padrão, solicita 2FA; outros fatores e limites fortes
+continuam podendo rejeitar. A resposta inclui `duplicate_payment`, com aviso,
+ID anterior e intervalo. Considera tentativas aprovadas ou pendentes de 2FA,
+sem confirmar liquidação; rejeições ficam fora. A janela usa `transaction_date`
+e é configurável em `duplicate_window_seconds`. Peso zero desativa os pontos.
+
 ## Verificar
 
 ```powershell
@@ -134,6 +142,7 @@ Fora do Docker, instale `requirements-dev.txt`, inicialize o PostgreSQL com
 `RISK_POLICY_PATH=config/risk-policy.json`; execute `python -m uvicorn src.app:app`.
 Bases antigas podem aplicar a migração aditiva `database/migrations/002_gnn_graph_indexes.sql`.
 Para o acumulado por conta, aplique também `database/migrations/004_account_untrust.sql`.
+Para o índice de busca de duplicidade, aplique `database/migrations/005_duplicate_payment.sql`.
 Essa migração não altera decisões antigas. A migração 003 de permissões é separada
 e está preparada para revisão; não é requisito para executar a migração 004.
 

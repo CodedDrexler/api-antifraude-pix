@@ -136,7 +136,7 @@ def test_opt_in_graph_contribution_can_request_two_factor(payload):
     assert enriched["rule_risk_score"] == 15
     assert enriched["gnn"]["applied_points"] == 20
     assert combined == "two_factor_required"
-    assert enriched["policy"]["version"] == "pix-score-v5+gnn-experimental-v1"
+    assert enriched["policy"]["version"] == "pix-score-v6+gnn-experimental-v1"
 
 
 def test_graph_cannot_reduce_a_hard_rejection_or_exceed_score_cap(payload):

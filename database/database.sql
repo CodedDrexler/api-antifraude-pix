@@ -22,6 +22,9 @@ CREATE INDEX ix_pix_payer_time ON pix_analysis (source_document, transaction_dat
 CREATE INDEX ix_pix_destination_time ON pix_analysis (destination_identity, transaction_date);
 CREATE INDEX ix_pix_device_time ON pix_analysis (device_id, transaction_date);
 CREATE INDEX ix_pix_account_received ON pix_analysis (source_account_identity, created_at);
+CREATE INDEX ix_pix_duplicate_payment
+    ON pix_analysis (source_account_identity, destination_identity, amount, transaction_date DESC)
+    WHERE status IN ('approved', 'two_factor_required');
 CREATE INDEX ix_pix_approved_profile ON pix_analysis (source_document, transaction_date)
     INCLUDE (amount, destination_identity, device_id) WHERE status = 'approved';
 
