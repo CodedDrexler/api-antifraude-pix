@@ -1,0 +1,131 @@
+{
+  "key": "6bc18655-b489-4c74-a395-83b2684f57dc",
+  "status": "rejected",
+  "metadata": {
+    "risk_score": 80,
+    "risk_level": "high",
+    "score_semantics": "heuristic_not_probability",
+    "raw_score": 85,
+    "group_scores": {
+      "exposure": {
+        "raw_score": 30,
+        "score": 30,
+        "cap": 80
+      },
+      "counterparty": {
+        "raw_score": 30,
+        "score": 25,
+        "cap": 25
+      },
+      "profile": {
+        "raw_score": 25,
+        "score": 25,
+        "cap": 25
+      }
+    },
+    "score_cap_reduction": 0,
+    "risk_group_count": 3,
+    "triggered_rules": [
+      {
+        "code": "amount_requires_two_factor",
+        "group": "exposure",
+        "weight": 30,
+        "contribution": 30,
+        "observed": 100000,
+        "threshold": 100000,
+        "hard_limit": false
+      },
+      {
+        "code": "new_destination_account",
+        "group": "counterparty",
+        "weight": 15,
+        "contribution": 15,
+        "observed": 0.0,
+        "threshold": 604800,
+        "hard_limit": false
+      },
+      {
+        "code": "unfamiliar_destination",
+        "group": "counterparty",
+        "weight": 15,
+        "contribution": 10,
+        "observed": false,
+        "threshold": true,
+        "hard_limit": false
+      },
+      {
+        "code": "amount_above_customer_profile",
+        "group": "profile",
+        "weight": 25,
+        "contribution": 25,
+        "observed": {
+          "amount": 100000,
+          "history_amount": 50000,
+          "history_count": 5
+        },
+        "threshold": {
+          "multiplier": 5,
+          "minimum_amount": 50000,
+          "minimum_history": 5
+        },
+        "hard_limit": false
+      }
+    ],
+    "decision_source": "risk_score",
+    "hard_limits": [],
+    "reasons": [
+      "amount_requires_two_factor",
+      "new_destination_account",
+      "unfamiliar_destination",
+      "amount_above_customer_profile"
+    ],
+    "policy": {
+      "version": "pix-score-v2",
+      "rejection_amount": 2000000,
+      "two_factor_amount": 100000,
+      "velocity_minutes": 10,
+      "velocity_limit": 5,
+      "accumulated_amount": 3000000,
+      "new_account_days": 7,
+      "profile_days": 30,
+      "profile_min_history": 5,
+      "profile_multiplier": 5,
+      "profile_min_amount": 50000,
+      "device_min_history": 3,
+      "device_min_amount": 50000,
+      "destination_min_history": 3,
+      "scoring": {
+        "two_factor_threshold": 30,
+        "rejection_threshold": 80,
+        "minimum_rejection_groups": 2,
+        "weights": {
+          "amount_above_rejection_limit": 80,
+          "velocity_above_limit": 80,
+          "accumulated_amount_above_limit": 80,
+          "amount_requires_two_factor": 30,
+          "new_source_account": 15,
+          "new_destination_account": 15,
+          "unfamiliar_destination": 15,
+          "amount_above_customer_profile": 25,
+          "unfamiliar_device": 20
+        },
+        "group_caps": {
+          "exposure": 80,
+          "activity": 80,
+          "account": 15,
+          "counterparty": 25,
+          "profile": 25,
+          "device": 20
+        }
+      }
+    },
+    "recent_transactions": 0,
+    "recent_amount": 0,
+    "source_account_age_days": 365,
+    "destination_account_age_days": 0,
+    "profile_transactions": 5,
+    "profile_amount": 50000,
+    "known_destination": false,
+    "known_device": true
+  }
+}
