@@ -8,20 +8,19 @@ Os scores são indicadores heurísticos; não representam probabilidade de fraud
 
 ## Escopo desta documentação
 
-Esta atualização publica **somente o README**. O código publicado que a antecede,
-na revisão `1ca3e5c`, usa **`pix-score-v8`**. O catálogo abaixo consolida a análise
-da revisão local **`pix-score-v9`** e da integração posterior do grafo; essas
-alterações de implementação ainda não estão incluídas neste commit documental.
+Esta atualização publica o projeto com a política **`pix-score-v9`**, a integração
+do grafo temporal v2, modelos, testes e entregáveis. A revisão anterior
+`1ca3e5c` usava **`pix-score-v8`**; o quadro abaixo resume a evolução.
 
-| Comportamento | Código publicado v8 | Revisão local analisada v9 |
+| Comportamento | Revisão anterior v8 | Revisão atual v9 |
 |---|---|---|
 | Ausência de referência | Primeiro Pix/referência ausente exigem 2FA independentemente do valor. | Exigem 2FA por esse motivo somente a partir de R$ 500; demais controles continuam. |
 | Formação inicial do perfil | Pode usar a primeira tentativa pendente como referência provisória. | Usa somente aprovações; pendências nunca formam referência. |
 | Grafo temporal v2 | `shadow` ou `off`, sem intervenção. Há também implementação legada v1. | V2 substitui v1; integração posterior admite `contribute`, limitado a aprovação → 2FA. |
 | Detalhes HTTP | Exibe metadados/evidências conforme contrato v8. | Resumo público; `include_details=true` acrescenta apenas nomes das regras. |
 
-Executar a branch publicada mantém o comportamento v8. A documentação de uma
-política nova não a ativa nem substitui código, configuração ou modelos.
+Executar esta revisão aplica a política v9. O Docker Compose usa o grafo temporal
+em `contribute` por padrão, conforme a configuração e o manifesto incluídos.
 
 ## Conta enviadora, receptora e titular
 
@@ -199,22 +198,22 @@ remetente; uma entrada suporta um par. Esses indicadores não acrescentam pontos
 
 | Versão / modo | Tratamento da saída |
 |---|---|
-| V2 publicado v8: `shadow` / `off` | Observa ou desativa; nunca altera status. |
-| V2 local posterior: `shadow` / `off` | Mantém observação ou desativação. |
-| V2 local posterior: `contribute` | No protótipo, pode elevar somente `approved` para `two_factor_required` com score ≥75,0977 e modelo/política compatíveis com manifesto avaliado. |
+| V2 na revisão v8: `shadow` / `off` | Observa ou desativa; nunca altera status. |
+| V2 atual: `shadow` / `off` | Mantém observação ou desativação. |
+| V2 atual: `contribute` | No protótipo, pode elevar somente `approved` para `two_factor_required` com score ≥75,0977 e modelo/política compatíveis com manifesto avaliado. |
 
-O corte local corresponde a `0.750977`, método `score_only_2fa/confidence_budget`.
+O corte corresponde a `0.750977`, método `score_only_2fa/confidence_budget`.
 Manifesto ausente/inválido, hash de modelo ou política divergente impedem ação.
 A contribuição não altera `risk_score`, não rejeita sozinha, não remove restrição,
 não gera suspeita própria nem aviso bancário. Score baixo não concede confiança
 ou atenua regras. O fator societário `graph` é independente dessa rede neural.
 
 Histórico insuficiente/truncado/inválido e falha tratada de inferência causam
-abstenção, sem score parcial ou nova intervenção. Sem avaliação, a revisão local
+abstenção, sem score parcial ou nova intervenção. Sem avaliação, a revisão atual
 omite `untrust_score`; zero numérico é válido. Falha SQL continua sendo erro, não
 aprovação silenciosa. Avaliações sintéticas e retreinos não publicam nem ativam
-automaticamente uma nova política; o modo local ativo foi uma escolha explícita
-posterior para o protótipo, ainda fora do código publicado neste commit.
+automaticamente uma nova política; o modo ativo foi uma escolha explícita
+para o protótipo e está incluído nesta revisão.
 
 ## Contrato, auditoria e configuração
 
@@ -247,7 +246,7 @@ docker compose up --build -d --wait
 ```
 
 Abra o [Swagger](http://127.0.0.1:8000/docs) e use um ID novo. A revisão publicada
-continua v8, incluindo seu início sem histórico descrito no quadro de versões.
+usa v9, incluindo seu início sem histórico descrito no quadro de versões.
 Porta/modos podem ser definidos em `.env`, conforme [.env.example](.env.example).
 `docker compose down` preserva o volume `pix_data`.
 
@@ -267,21 +266,29 @@ o volume para atualizar schema.
 
 ## Testes e limites da avaliação
 
-Na revisão publicada, use `.\testar.bat --no-pause` conforme o
-[script versionado](testar.bat), que prepara API/banco isolados e executa testes,
-lint e formatação. GitHub Actions também executa as verificações em push/PR.
+Com API e banco iniciados pelo Compose, execute:
+
+```powershell
+docker compose --profile test build tests
+docker compose --profile test run --rm --no-deps tests
+docker compose --profile test run --rm --no-deps tests ruff check src tests scripts
+docker compose --profile test run --rm --no-deps tests ruff format --check src tests scripts
+```
+
+Esses testes usam o banco do projeto Compose; para uma base separada, use outro
+nome de projeto (`-p`) e outra `API_PORT` desde a inicialização dos serviços.
+GitHub Actions também executa as verificações em push/PR.
 Os testes cobrem fronteiras, combinação de fatores, concorrência, persistência,
 replay, recortes temporais e separação entre risco próprio e relacional.
 
-Esta publicação documental não reexecuta a suíte de negócio. Relatórios e
-inventários de outras revisões são registros históricos, não cobertura automática
-da revisão atual.
+Relatórios e inventários de outras revisões são registros históricos, não
+cobertura automática da revisão atual.
 Dados sintéticos não comprovam eficácia ou taxa de falsos positivos em Pix real.
 
 Referências disponíveis no código publicado: [regras](docs/risk-scoring.md),
 [confiança contextual](docs/contextual-trust.md), [acumulado](docs/account-untrust.md),
 [titular e vínculos](docs/entity-risk.md), [grafo temporal](docs/graph-v2-api.md),
 [experimentos](docs/graph-v2-experiment.md) e [arquitetura](docs/architecture.md).
-Esses documentos acompanham a revisão publicada e podem conter contratos anteriores
-à síntese v9 deste README. O projeto não executa 2FA, liquidação, envio de avisos
+Os [entregáveis](entregaveis) incluem apresentações e roteiros.
+O projeto não executa 2FA, liquidação, envio de avisos
 ou gestão de limites bancários; aprovação local não confirma pagamento.

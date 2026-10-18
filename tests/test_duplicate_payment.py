@@ -38,13 +38,12 @@ def test_approved_pix_duplicate_is_explained_in_compact_response_and_replayed(ap
     seed_profile(api, payload, 1)
     original = post(api, new_transaction(payload))
     assert original["status"] == "approved"
-    status, duplicate, _ = request("POST", "/pix/transaction", payload)
+    status, duplicate, _ = request("POST", "/pix/transaction", payload, include_details=True)
     assert status == 200
     assert duplicate["status"] == "two_factor_required"
-    assert duplicate["metadata"]["risk_factors"][0]["name"] == "duplication"
-    assert "Possível pagamento duplicado" in duplicate["metadata"]["duplicate_payment"]["message"]
-    assert request("POST", "/pix/transaction", payload)[1] == duplicate
-    assert request("GET", "/pix/transaction/" + payload["id"])[1] == duplicate
+    assert duplicate["metadata"]["rules"] == ["Possível pagamento duplicado"]
+    assert request("POST", "/pix/transaction", payload, include_details=True)[1] == duplicate
+    assert request("GET", "/pix/transaction/" + payload["id"], include_details=True)[1] == duplicate
 
 
 @pytest.mark.parametrize("field", ["amount", "payer", "source_account", "destination", "recipient"])
@@ -72,7 +71,8 @@ def test_changed_device_and_opening_dates_do_not_hide_duplicate(api, payload):
     payload["destination_account"]["opening_date"] = "2019-01-01T00:00:00Z"
     result = post(api, payload)
     assert result["metadata"]["duplicate_payment"]["previous_transaction_id"] != payload["id"]
-    assert result["status"] == original["status"] == "two_factor_required"
+    assert original["status"] == "approved"
+    assert result["status"] == "two_factor_required"
 
 
 def test_rejected_attempt_is_not_a_possible_previous_payment(api, payload):
@@ -88,7 +88,7 @@ def test_concurrent_new_ids_detect_duplicate_and_retries_stay_idempotent(api, pa
     with ThreadPoolExecutor(max_workers=2) as pool:
         results = list(pool.map(lambda item: post(api, item), transactions))
     assert sum("duplicate_payment" in item["metadata"] for item in results) == 1
-    assert all(item["status"] == "two_factor_required" for item in results)
+    assert sorted(item["status"] for item in results) == ["approved", "two_factor_required"]
     for transaction, result in zip(transactions, results, strict=True):
         assert post(api, transaction) == result
     last = post(api, payload)

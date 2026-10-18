@@ -74,6 +74,7 @@ def test_active_block_does_not_refresh_itself_even_on_velocity_risk(payload):
 
 
 def test_first_transaction_and_account_age_alone_do_not_build_untrust(payload):
+    payload["amount"] = 50_000
     payload["source_account"]["opening_date"] = payload["transaction_date"]
     status, metadata = DecisionEngine(Policy()).evaluate(
         PixTransactionCreate.model_validate(payload),

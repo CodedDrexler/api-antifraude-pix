@@ -7,10 +7,8 @@ services:
       - "127.0.0.1:${API_PORT:-8000}:8000"
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://pix:pix@db:5432/pix}
-      GNN_MODE: ${GNN_MODE:-shadow}
-      GNN_MODEL_PATH: /app/models/gnn-synthetic-v1.json
-      GNN_V2_MODE: ${GNN_V2_MODE:-shadow}
-      GNN_V2_MODEL_PATH: ${GNN_V2_MODEL_PATH:-/app/models/gnn-directed-temporal-v2-seed-42.json}
+      GNN_V2_MODE: ${GNN_V2_MODE:-contribute}
+      GNN_V2_MODEL_PATH: ${GNN_V2_MODEL_PATH:-/app/models/false-positive-v1/gnn-false-positive-v1-seed-42.json}
       RISK_POLICY_PATH: /app/config/risk-policy.json
       ENTITY_RISK_MODE: ${ENTITY_RISK_MODE:-shadow}
       ENTITY_REGISTRY_PATH: ${ENTITY_REGISTRY_PATH:-}

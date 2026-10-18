@@ -1,4 +1,4 @@
-"""Construction, eligibility and precision of approved and provisional value references."""
+"""Construction, eligibility and precision of approved-only value references."""
 
 from dataclasses import replace
 from datetime import datetime, timedelta
@@ -78,17 +78,18 @@ def test_repository_uses_last_ten_approved_pix_without_day_cutoff(api, payload):
     assert candidate["status"] == "two_factor_required"
 
 
-def test_registered_two_factor_pix_can_bootstrap_amount_history(api, payload):
+def test_pending_two_factor_pix_cannot_bootstrap_amount_history(api, payload):
+    payload["amount"] = 50_000
     first = post(api, payload)
     assert first["status"] == "two_factor_required"
     assert post(api, payload) == first
-    second = post(api, new_transaction(payload, amount=5000))
-    assert second["metadata"]["profile_transactions"] == 1
+    second = post(api, new_transaction(payload, amount=150_000))
+    assert second["metadata"]["profile_transactions"] == 0
     assert second["metadata"]["approved_transactions"] == 0
-    assert second["metadata"]["profile_limit"] == 5000
-    assert second["metadata"]["profile_basis"] == "initial_pending_attempt"
-    assert second["metadata"]["risk_score"] == 80
-    assert second["metadata"]["reasons"] == ["amount_above_customer_profile"]
+    assert second["metadata"]["profile_limit"] is None
+    assert second["metadata"]["profile_basis"] == "unavailable"
+    assert second["metadata"]["risk_score"] == 30
+    assert second["metadata"]["reasons"] == ["insufficient_amount_history"]
     assert second["status"] == "two_factor_required"
 
 
@@ -109,19 +110,19 @@ def test_rejected_and_pending_attempts_do_not_inflate_approved_profile(api, payl
     assert candidate["status"] == "two_factor_required"
 
 
-def test_pending_bootstrap_survives_old_history_without_establishing_trust(api, payload):
+def test_old_pending_attempts_never_establish_value_or_familiarity(api, payload):
     at = datetime.fromisoformat(payload["transaction_date"])
-    for days, amount in [(32, 1000), (31, 10_000)]:
+    for days, amount in [(32, 50_000), (31, 100_000)]:
         pending = new_transaction(
             payload, amount=amount, transaction_date=(at - timedelta(days=days)).isoformat()
         )
         assert post(api, pending)["status"] == "two_factor_required"
-    metadata = post(api, new_transaction(payload, amount=5000))["metadata"]
+    metadata = post(api, new_transaction(payload, amount=150_000))["metadata"]
     assert metadata["registered_transactions"] == 2
-    assert metadata["profile_transactions"] == 1
-    assert metadata["profile_amount"] == 1000
-    assert metadata["profile_limit"] == 5000
-    assert metadata["profile_basis"] == "initial_pending_attempt"
+    assert metadata["profile_transactions"] == 0
+    assert metadata["profile_amount"] == 0
+    assert metadata["profile_limit"] is None
+    assert metadata["profile_basis"] == "unavailable"
     assert metadata["approved_transactions"] == 0
     assert metadata["known_device"] is False
     assert metadata["known_destination"] is False

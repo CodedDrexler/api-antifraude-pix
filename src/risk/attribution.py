@@ -26,6 +26,8 @@ def decision_causes(metadata, status, source=None):
     source = source or metadata["decision_source"]
     if source == "account_untrust":
         return [{"rule_id": source, "subject": "sender", "source": "local_history"}]
+    if source == "gnn_v2":
+        return [{"rule_id": "gnn_relational_pattern", "subject": "relationship", "source": "temporal_gnn"}]
     if source == "entity_risk":
         return [
             {

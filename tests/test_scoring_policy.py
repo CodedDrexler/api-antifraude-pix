@@ -6,7 +6,6 @@ import pytest
 
 from src.constants import FactorWeights, Policy, RuleWeights, ScoringPolicy
 from src.controllers.decision_engine import DecisionEngine
-from src.gnn.service import combine_graph_risk
 from src.risk.types import History
 from src.schemas.pix import PixTransactionCreate
 
@@ -90,12 +89,11 @@ def test_configured_rejection_requires_three_positive_factors(
 
 
 @pytest.mark.parametrize(
-    "registered,amount,graph_points,expected,source,exposure_rule",
+    "registered,amount,expected,source,exposure_rule",
     [
         pytest.param(
             0,
-            1000,
-            20,
+            50_000,
             "two_factor_required",
             "first_transaction",
             "first_transaction",
@@ -103,8 +101,7 @@ def test_configured_rejection_requires_three_positive_factors(
         ),
         pytest.param(
             2,
-            1000,
-            0,
+            50_000,
             "two_factor_required",
             "insufficient_history",
             "insufficient_amount_history",
@@ -113,7 +110,6 @@ def test_configured_rejection_requires_three_positive_factors(
         pytest.param(
             0,
             3_000_000,
-            20,
             "rejected",
             "hard_limit",
             "first_transaction",
@@ -122,7 +118,6 @@ def test_configured_rejection_requires_three_positive_factors(
         pytest.param(
             2,
             3_000_000,
-            0,
             "rejected",
             "hard_limit",
             "insufficient_amount_history",
@@ -130,8 +125,8 @@ def test_configured_rejection_requires_three_positive_factors(
         ),
     ],
 )
-def test_missing_reference_priority_survives_zero_weights_and_graph(
-    payload, registered, amount, graph_points, expected, source, exposure_rule
+def test_missing_reference_priority_survives_zero_weights(
+    payload, registered, amount, expected, source, exposure_rule
 ):
     scoring = replace(ScoringPolicy(), factor_weights=replace(FactorWeights(), exposure=0, activity=0))
     policy = replace(Policy(), scoring=scoring)
@@ -150,21 +145,6 @@ def test_missing_reference_priority_survives_zero_weights_and_graph(
         assert metadata["group_scores"]["activity"]["score"] == 0
     else:
         assert metadata["hard_limits"] == []
-    combined, enriched = combine_graph_risk(
-        status,
-        metadata,
-        {
-            "mode": "contribute",
-            "status": "scored",
-            "proposed_points": graph_points,
-            "gnn_score": 95 if graph_points else 0,
-            "threshold": 80,
-        },
-    )
-    assert combined == expected
-    assert enriched["decision_source"] == source
-    assert enriched["risk_score"] == graph_points
-    assert metadata["risk_score"] == 0
 
 
 @pytest.mark.parametrize(

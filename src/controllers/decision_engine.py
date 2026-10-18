@@ -92,7 +92,7 @@ class DecisionEngine:
             },
         }
         status, source = score_decision(metadata, policy_snapshot["scoring"])
-        if status != "rejected" and history.profile_count == 0:
+        if status != "rejected" and context.needs_history_confirmation:
             status = "two_factor_required"
             source = "first_transaction" if context.registered_count == 0 else "insufficient_history"
         metadata["decision_source"] = source

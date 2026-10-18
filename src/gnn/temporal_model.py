@@ -53,6 +53,10 @@ class TemporalModel:
                 raise ValueError(f"Invalid model parameter: {name}")
         self.sha256 = hashlib.sha256(raw).hexdigest()
         self.version = data["model_version"]
+        training_policy = data.get("training_evidence_policy", "pix-score-v7")
+        if not isinstance(training_policy, str) or not 0 < len(training_policy) <= 128:
+            raise ValueError("Invalid training evidence policy")
+        self.training_evidence_policy = training_policy
 
     def predict(self, graph):
         w = self.weights

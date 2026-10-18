@@ -59,8 +59,7 @@ do motor. O relógio de recebimento é controlado apenas no teste, seguindo os
 instantes de chegada simulados. A gravação e a recuperação da decisão também
 são verificadas. Há ainda um caso de conflito de ID e dois testes do relatório.
 
-O JUnit desta execução está em `tmp/untrust-contrasts.xml` (arquivo local ignorado
-pelo Git). Para reproduzir a suíte completa, use `.\testar.bat --no-pause`.
+Para reproduzir a suíte completa, siga os comandos de testes do [README](../README.md).
 Para rodar apenas os novos casos no ambiente de testes:
 
 ```powershell
@@ -104,4 +103,4 @@ avaliação final independente nem estimativa de desempenho em produção.
 Decisões antigas são preservadas com sua política original. A versão v7 afeta
 novas análises; incrementos anteriores não são recalculados e expiram na janela
 original. Para uma demonstração sem mistura de versões, utilize o ambiente
-isolado criado por `testar.bat`.
+isolado descrito no [README](../README.md).

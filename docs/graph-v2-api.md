@@ -1,21 +1,46 @@
-# Grafo v2 na API
+# Modelo Relacional Temporal v2 — experimental
 
-Integração de 18/10/2026, API 2.5.0. O grafo direcionado e temporal passou a
-executar em cada **nova análise** de Pix no modo `shadow` por padrão. Seu
-resultado fica salvo em `metadata.gnn_v2`, separado do GNN v1 e de `entity_risk`.
-O v2 não adiciona pontos, não muda a decisão e não alimenta o acumulado próprio.
+Integração de 18/10/2026. O grafo direcionado e temporal executa em cada
+**nova análise** de Pix no modo `contribute` do protótipo por padrão. Seu
+resultado fica salvo em `decision_metadata.gnn_v2`, separado de `entity_risk`.
+O v2 não adiciona pontos nem alimenta o acumulado próprio. Pode elevar uma
+aprovação para 2FA, respeitando os limites da [integração](gnn-contribution.md).
+É o único modelo de grafo da API: a implementação, pesos, treino e configuração
+do modelo anterior foram retirados. As evidências já salvas permanecem imutáveis.
+
+O modelo é o **Modelo Relacional Temporal v2 — experimental**. A resposta
+pública inclui `untrust_score` somente quando há score do grafo disponível.
+`gnn_v2`, `gnn_score`, versões e hashes permanecem apenas na evidência interna
+salva. GET e reenvio projetam o mesmo resumo a partir da decisão original,
+sem executar novamente o modelo nem alterar o registro.
+
+Tecnicamente, é uma GNN simplificada inspirada em GraphSAGE: duas camadas agregam
+mensagens dos vizinhos por tipo de relação e aplicam pesos treinados. Treinamento
+em PyTorch e inferência em NumPy executam a mesma rede, com verificação de paridade.
+Isso caracteriza a arquitetura, não sua eficácia. Os atributos temporais e o
+decaimento das arestas são definidos explicitamente; não há memória recorrente
+de eventos como em uma TGN. A base é sintética e a saída não é calibrada.
+Referência da agregação: [GraphSAGE, Hamilton et al.](https://arxiv.org/abs/1706.02216).
 
 ## Configuração e execução
 
 ```dotenv
-GNN_V2_MODE=shadow
-GNN_V2_MODEL_PATH=/app/models/gnn-directed-temporal-v2-seed-42.json
+GNN_V2_MODE=contribute
+GNN_V2_MODEL_PATH=/app/models/false-positive-v1/gnn-false-positive-v1-seed-42.json
 ```
 
-Os modos disponíveis são `shadow` e `off`. `contribute` é recusado na
-inicialização, pois a integração é observacional. O modelo da semente 42 é
+Os modos disponíveis são `contribute`, `shadow` e `off`. O padrão do protótipo
+pode elevar aprovação para 2FA com score ≥75,0977 e artefatos válidos; nunca
+rejeita sozinho nem gera pontos. O modelo da semente 42 é
 um padrão fixo, sem seleção automática do melhor resultado de teste.
 O treinamento não ocorre em requisições; a API usa somente NumPy.
+
+Após o [experimento de falsos positivos](gnn-false-positives.md), o observador
+padrão passou a usar o candidato retreinado com a política v9. A semente 42 foi
+mantida por convenção. Os pesos originais e os relatórios históricos continuam
+disponíveis para reprodução, com caminho explícito nos scripts e regressões.
+Após a adoção, a [integração de contribuição](gnn-contribution.md) acrescentou
+somente aprovação para 2FA no protótipo. O score das regras permanece separado.
 
 Depois de atualizar o código:
 
@@ -41,6 +66,13 @@ com até 300 tentativas em 30 dias e até 100 documentos descobertos. Inclui
 recebimentos e contas do mesmo titular, além de saídas. O resultado descreve
 essa vizinhança limitada; não é uma pesquisa de toda a rede Pix.
 
+Um exemplo offline pode fornecer mais relações que essa consulta. No caso
+temporal de `scripts/demo_temporal_graph.py`, fixado nos pesos originais, o conjunto completo tem 20 eventos e 21 nós, com saída
+96,9626; a consulta real de dois saltos seleciona 14 eventos e 18 nós, com saída
+97,3076 para o mesmo candidato. O teste integrado verifica esse recorte e sua
+previsão própria, sem exigir igualdade entre grafos diferentes. Ambos preservam
+a decisão por regras e a contribuição zero do modelo experimental.
+
 A evidência de suspeita própria é consultada separadamente para os documentos
 descobertos, com até 300 incrementos na janela de 24 horas do servidor. Usa
 somente `sender-evidence-v2`: incrementos legados que poderiam incluir sinais
@@ -62,29 +94,29 @@ o projeto não confirma liquidação.
 
 ## Resposta e auditoria
 
-O resumo da resposta inclui, quando o modelo calculou uma avaliação:
+O resumo público usa estes campos dentro de `metadata`:
 
 ```json
 {
-  "gnn_v2": {
-    "mode": "shadow",
-    "status": "scored",
-    "gnn_score": 12.3456,
-    "applied_points": 0,
-    "model_version": "gnn-directed-temporal-v2-seed-42",
-    "feature_version": "pix-directed-temporal-v2"
-  }
+  "risk_score": 30,
+  "untrust_score": 12.3456,
+  "bank_notification_required": false
 }
 ```
 
-O número é apenas ilustrativo. O score é a saída não calibrada do modelo,
-multiplicada por 100; não é uma probabilidade de fraude.
+O número é ilustrativo. `untrust_score` é a saída não calibrada do grafo de 0 a
+100, não uma probabilidade de fraude nem o acumulado da conta. O campo é omitido
+quando não existe avaliação disponível, inclusive com o grafo desligado ou sem
+histórico suficiente. O modo do grafo fica somente na auditoria interna.
 
-Com `include_details=true`, ficam disponíveis hash do modelo, limites, cobertura,
-cortes dos dois relógios, quantidade de eventos, atributos normalizados da
-transação e duração da construção/inferência. A duração total da análise
-continua em `metadata.processing_time_ms` e inclui as consultas ao banco.
-A política salva também identifica a configuração do v2.
+`include_details=true` acrescenta somente `rules`, com nomes legíveis das regras
+aplicadas. Não expõe pesos, política, versões, cobertura ou diagnósticos do modelo.
+`applied_points` indicava a diferença efetiva no score causada pelo modelo; no v2
+é sempre zero, inclusive em `contribute`, e foi retirado do contrato público.
+
+Hash, limites, cobertura, cortes dos relógios, eventos, atributos normalizados e
+tempos continuam na auditoria imutável no banco. O tempo total inclui as consultas
+antes da gravação e permanece em `decision_metadata.processing_time_ms`.
 
 O modelo registra `insufficient_history` quando há menos de três tentativas
 elegíveis. Histórico financeiro, evidência própria ou vizinhança que excedam
@@ -118,18 +150,28 @@ e o acumulado próprio do CPF em zero.
 
 ## Limites da avaliação
 
-Os pesos continuam sendo os do experimento sintético, treinados sobre evidências
-da política v7. A política v8 passou a distinguir evidências próprias da origem
-e confiança por relação; isso muda o contexto de entrada e está explicitado
-em `training_evidence_policy` e `own_evidence_version`. Os números do
+O observador padrão foi retreinado com evidências da política v9 e negativos
+difíceis, mantendo os pesos originais v7 para reprodução. A auditoria registra
+a política de treinamento de cada artefato em `training_evidence_policy`.
+A política atual distingue evidências próprias da origem e confiança por
+relação; somente valores a partir de R$ 500 exigem 2FA por ausência de perfil,
+e o perfil é formado apenas por aprovações. Os números históricos do
 [experimento offline](graph-v2-experiment.md) não são uma medição da eficácia
 da API integrada nem justificam contribuição automática.
+
+A [avaliação posterior na política v9](gnn-v9-validation.md) usa o controlador e a
+consulta PostgreSQL reais, compara propostas limitadas a 2FA e aplica critérios
+explícitos de ganho e falsos positivos. Ela não habilita contribuição automaticamente.
+
+O [experimento com negativos difíceis](gnn-false-positives.md) amplia os casos
+legítimos e treina candidatos com o mesmo recorte PostgreSQL. Seus pesos são
+armazenados separadamente. O candidato 42 foi adotado explicitamente como
+observador após a comparação; os avaliadores não promovem modelos automaticamente.
 
 Os testes de integração estão em `test_temporal_live.py` e
 `test_temporal_live_db.py`. Cobrem os dois relógios, limites, legado, replay,
 consulta real de vizinhança, falhas, e CPF limpo com vínculos empresariais.
 
-Verificação conjunta de 18/10/2026: **493 testes aprovados**, sem casos ignorados,
-incluindo a integração v2, o perfil por relação e a atribuição das evidências
-da política v8. Lint e formatação passaram nos 77 arquivos Python. O relatório
-local desta execução está em `tmp/graph-v2-live-tests.xml`.
+O caso completo está em `test_temporal_case.py`, incluindo o recorte PostgreSQL,
+a decisão salva e o replay. Execute a suíte e as verificações de qualidade
+pelos comandos do [README](../README.md).

@@ -1,0 +1,4499 @@
+{
+  "scope": "Synthetic false-positive experiment; no API activation or confirmed fraud outcomes",
+  "policy": {
+    "version": "pix-score-v9",
+    "no_history_min_amount": 50000,
+    "duplicate_window_seconds": 120,
+    "velocity_minutes": 10,
+    "velocity_limit": 5,
+    "accumulated_amount": 3000000,
+    "new_account_days": 7,
+    "profile_days": 30,
+    "profile_history_size": 10,
+    "profile_multiplier": 5,
+    "profile_min_amount": 50000,
+    "device_min_history": 3,
+    "device_min_amount": 50000,
+    "destination_min_history": 3,
+    "device_window_hours": 24,
+    "device_owner_limit": 3,
+    "payer_device_limit": 3,
+    "night_start_hour": 20,
+    "night_end_hour": 6,
+    "night_min_amount": 50000,
+    "night_min_history": 3,
+    "untrust": {
+      "enabled": true,
+      "rejection_enabled": false,
+      "window_hours": 24,
+      "two_factor_threshold": 40,
+      "notification_threshold": 60,
+      "rejection_threshold": 80,
+      "maximum_increment": 25,
+      "score_divisor": 4,
+      "minimum_rejection_events": 4
+    },
+    "scoring": {
+      "two_factor_threshold": 30,
+      "rejection_threshold": 80,
+      "minimum_rejection_groups": 2,
+      "weights": {
+        "velocity_above_limit": 80,
+        "accumulated_amount_above_limit": 80,
+        "first_transaction": 30,
+        "new_source_account": 15,
+        "new_destination_account": 15,
+        "unfamiliar_destination": 15,
+        "amount_above_customer_profile": 80,
+        "unfamiliar_device": 20,
+        "shared_device": 30,
+        "multiple_devices": 20,
+        "unusual_night_app": 15,
+        "insufficient_amount_history": 30,
+        "possible_duplicate_payment": 30
+      },
+      "group_caps": {
+        "exposure": 80,
+        "activity": 80,
+        "account": 15,
+        "counterparty": 25,
+        "profile": 80,
+        "device": 40,
+        "access_context": 15,
+        "duplication": 30
+      },
+      "factor_weights": {
+        "exposure": 100,
+        "activity": 100,
+        "account": 100,
+        "counterparty": 100,
+        "profile": 100,
+        "device": 100,
+        "graph": 100,
+        "access_context": 100,
+        "duplication": 100
+      },
+      "rule_factors": {
+        "velocity_above_limit": "activity",
+        "accumulated_amount_above_limit": "activity",
+        "first_transaction": "exposure",
+        "new_source_account": "account",
+        "new_destination_account": "counterparty",
+        "unfamiliar_destination": "counterparty",
+        "amount_above_customer_profile": "profile",
+        "unfamiliar_device": "device",
+        "shared_device": "device",
+        "multiple_devices": "device",
+        "unusual_night_app": "access_context",
+        "insufficient_amount_history": "exposure",
+        "possible_duplicate_payment": "duplication"
+      }
+    },
+    "contextual_trust": {
+      "enabled": true,
+      "history_size": 20,
+      "minimum_payer_samples": 5,
+      "minimum_relationship_samples": 3,
+      "minimum_received_days": 2,
+      "minimum_ratio_percent": 50,
+      "maximum_ratio_percent": 200
+    }
+  },
+  "design": {
+    "offsets": {
+      "train": 1100000,
+      "validation": 1200000,
+      "calibration": 1300000,
+      "test": 1400000
+    },
+    "months": {
+      "train": 1,
+      "validation": 4,
+      "calibration": 7,
+      "test": 10
+    },
+    "kinds": [
+      "mule_direct",
+      "mule_two_hops",
+      "mule_no_risky_neighbor",
+      "mule_first_repass",
+      "innocent_payer",
+      "merchant",
+      "merchant_fast_settlement",
+      "normal",
+      "stale_contact",
+      "temporal_fast",
+      "temporal_slow",
+      "contract_habitual",
+      "contract_new_recipient",
+      "contract_fast_settlement",
+      "contract_changed_device",
+      "contract_shared_device",
+      "contract_risky_senders",
+      "ambiguous_legitimate_repass"
+    ],
+    "seeds": [
+      42,
+      43,
+      44
+    ],
+    "epochs": 100,
+    "counts_per_kind": {
+      "train": 40,
+      "validation": 20,
+      "calibration": 50,
+      "test": 100
+    },
+    "history": "Actual PostgreSQL/controller bounded neighborhood for training and evaluation",
+    "selection": "Epoch by separate validation BCE; thresholds by separate calibration; no test retuning or winning-seed selection",
+    "ambiguous_pair": "mule_direct and ambiguous_legitimate_repass have identical observed inputs and opposite assumed intents; neither can be perfectly distinguished",
+    "limitations": [
+      "New synthetic seeds are not new real-world populations or confirmed outcomes",
+      "Same generator families across splits; bootcamp original cases are development regressions",
+      "Paired scenarios and seeds are dependent; nominal binomial intervals are exploratory",
+      "No confirmed settlements, delayed receipts, authentication outcomes or intervention feedback loop"
+    ]
+  },
+  "split_sha256": {
+    "train": "4aa9012466de7f2f04663d9b34515747aa777bd2a56d4374f60f3327f6731f94",
+    "validation": "52899d7fe1e9f8bf962dfdf7c443ea01e03815d3261414389301e8dd4f436a82",
+    "calibration": "d901d6442506691f4d0b7b57e25623f6bde6a9bd91e11c8fa47c3857beef80fc",
+    "test": "cf0bab61260fd39b49a2787748abd2e5c212d386dab56b2cc843b1dfef84c782"
+  },
+  "training": [
+    {
+      "seed": 42,
+      "best_epoch": 99,
+      "validation_loss": 0.13541002571582794,
+      "initial_training_loss": 0.6834034323692322,
+      "final_training_loss": 0.13824963569641113,
+      "export_max_absolute_error": 5.401926281844993e-07
+    },
+    {
+      "seed": 43,
+      "best_epoch": 100,
+      "validation_loss": 0.1481914222240448,
+      "initial_training_loss": 0.713823676109314,
+      "final_training_loss": 0.15126864612102509,
+      "export_max_absolute_error": 6.415487757704952e-07
+    },
+    {
+      "seed": 44,
+      "best_epoch": 98,
+      "validation_loss": 0.1440078467130661,
+      "initial_training_loss": 0.7014087438583374,
+      "final_training_loss": 0.1487118899822235,
+      "export_max_absolute_error": 6.10981613913264e-07
+    }
+  ],
+  "models": {
+    "original-42": "6c6c9eedcbd63bde1ced13f79c2d543233472f14e1a336a1ca5adf5fbc099a2e",
+    "original-43": "14604c87e1a07ae4c8e88ec0683eca6db09b21e70903918e83d601a8c03df3a8",
+    "original-44": "63061ced6afcdd388b276acb7098c700f277994ca68eaf95b9861cf8ebb173e7",
+    "candidate-42": "410478ca51f26db3587096f8136a470a1275db3cc1a2740e394761481cfeeaad",
+    "candidate-43": "9426c168031fb792f7384846e122b54c0a8d16649ab004f488898d5ad4be2be0",
+    "candidate-44": "ad40b5e08309f19fe803ff0d982d49c60341ac277b522e2b4fc67cae1785de81"
+  },
+  "runs": [
+    {
+      "model": "original-42",
+      "method": "score_only_2fa",
+      "calibration": {
+        "threshold": 0.999647,
+        "precision": 1.0,
+        "recall": 0.08333333333333333,
+        "false_positive_rate": 0.0,
+        "f1": 0.15384615384615385,
+        "roc_auc": 0.9090666666666667,
+        "true_positive": 25,
+        "false_positive": 0,
+        "true_negative": 600,
+        "false_negative": 275,
+        "threshold_score_0_100": 99.9647,
+        "baseline_statuses": {
+          "approved": 829,
+          "two_factor_required": 64,
+          "rejected": 7
+        },
+        "proposed_statuses": {
+          "approved": 804,
+          "two_factor_required": 89,
+          "rejected": 7
+        },
+        "additional_fraud_2fa": 25,
+        "additional_legitimate_2fa": 0,
+        "additional_fraud_recall": 0.08333333333333333,
+        "baseline_approved_legitimate": 529,
+        "additional_legitimate_rate": 0.0,
+        "additional_legitimate_rate_ci95": [
+          0.0,
+          0.0072093842494842545
+        ],
+        "additional_rejections": 0,
+        "available_scores": 900,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_changed_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_habitual": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_shared_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_direct": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_first_repass": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_two_hops": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 25,
+            "additional_rate": 0.5
+          },
+          "normal": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_slow": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "test": {
+        "threshold": 0.999647,
+        "precision": 1.0,
+        "recall": 0.08333333333333333,
+        "false_positive_rate": 0.0,
+        "f1": 0.15384615384615385,
+        "roc_auc": 0.9105055555555556,
+        "true_positive": 50,
+        "false_positive": 0,
+        "true_negative": 1200,
+        "false_negative": 550,
+        "threshold_score_0_100": 99.9647,
+        "baseline_statuses": {
+          "approved": 1661,
+          "two_factor_required": 126,
+          "rejected": 13
+        },
+        "proposed_statuses": {
+          "approved": 1611,
+          "two_factor_required": 176,
+          "rejected": 13
+        },
+        "additional_fraud_2fa": 50,
+        "additional_legitimate_2fa": 0,
+        "additional_fraud_recall": 0.08333333333333333,
+        "baseline_approved_legitimate": 1061,
+        "additional_legitimate_rate": 0.0,
+        "additional_legitimate_rate_ci95": [
+          0.0,
+          0.0036075406238864137
+        ],
+        "additional_rejections": 0,
+        "available_scores": 1800,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_changed_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_habitual": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_shared_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_direct": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_first_repass": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_two_hops": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 50,
+            "additional_rate": 0.5
+          },
+          "normal": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_slow": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "numerical_gate": {
+        "additional_recall_at_least_5_percent": true,
+        "legitimate_rate_upper_ci95_at_most_1_percent": true,
+        "worst_legitimate_scenario_rate_at_most_5_percent": true,
+        "no_additional_rejections": true,
+        "score_coverage_at_least_95_percent": true
+      }
+    },
+    {
+      "model": "original-42",
+      "method": "corroborated_2fa",
+      "calibration": {
+        "threshold": 0.999583,
+        "precision": 0.0,
+        "recall": 0.0,
+        "false_positive_rate": 0.0,
+        "f1": 0.0,
+        "roc_auc": 0.6632361111111111,
+        "true_positive": 0,
+        "false_positive": 0,
+        "true_negative": 600,
+        "false_negative": 300,
+        "threshold_score_0_100": 99.9583,
+        "baseline_statuses": {
+          "approved": 829,
+          "two_factor_required": 64,
+          "rejected": 7
+        },
+        "proposed_statuses": {
+          "approved": 829,
+          "two_factor_required": 64,
+          "rejected": 7
+        },
+        "additional_fraud_2fa": 0,
+        "additional_legitimate_2fa": 0,
+        "additional_fraud_recall": 0.0,
+        "baseline_approved_legitimate": 529,
+        "additional_legitimate_rate": 0.0,
+        "additional_legitimate_rate_ci95": [
+          0.0,
+          0.0072093842494842545
+        ],
+        "additional_rejections": 0,
+        "available_scores": 900,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_changed_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_habitual": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_shared_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_direct": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_first_repass": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_two_hops": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "normal": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_slow": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "test": {
+        "threshold": 0.999583,
+        "precision": 0.0,
+        "recall": 0.0,
+        "false_positive_rate": 0.0025,
+        "f1": 0.0,
+        "roc_auc": 0.6635944444444445,
+        "true_positive": 0,
+        "false_positive": 3,
+        "true_negative": 1197,
+        "false_negative": 600,
+        "threshold_score_0_100": 99.9583,
+        "baseline_statuses": {
+          "approved": 1661,
+          "two_factor_required": 126,
+          "rejected": 13
+        },
+        "proposed_statuses": {
+          "approved": 1658,
+          "two_factor_required": 129,
+          "rejected": 13
+        },
+        "additional_fraud_2fa": 0,
+        "additional_legitimate_2fa": 3,
+        "additional_fraud_recall": 0.0,
+        "baseline_approved_legitimate": 1061,
+        "additional_legitimate_rate": 0.002827521206409048,
+        "additional_legitimate_rate_ci95": [
+          0.0009620681891288918,
+          0.008280114052341577
+        ],
+        "additional_rejections": 0,
+        "available_scores": 1800,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_changed_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 3,
+            "additional_rate": 0.03
+          },
+          "contract_habitual": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_shared_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_direct": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_first_repass": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_two_hops": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "normal": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_slow": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "numerical_gate": {
+        "additional_recall_at_least_5_percent": false,
+        "legitimate_rate_upper_ci95_at_most_1_percent": true,
+        "worst_legitimate_scenario_rate_at_most_5_percent": true,
+        "no_additional_rejections": true,
+        "score_coverage_at_least_95_percent": true
+      }
+    },
+    {
+      "model": "original-43",
+      "method": "score_only_2fa",
+      "calibration": {
+        "threshold": 0.999517,
+        "precision": 1.0,
+        "recall": 0.08333333333333333,
+        "false_positive_rate": 0.0,
+        "f1": 0.15384615384615385,
+        "roc_auc": 0.9082333333333333,
+        "true_positive": 25,
+        "false_positive": 0,
+        "true_negative": 600,
+        "false_negative": 275,
+        "threshold_score_0_100": 99.9517,
+        "baseline_statuses": {
+          "approved": 829,
+          "two_factor_required": 64,
+          "rejected": 7
+        },
+        "proposed_statuses": {
+          "approved": 804,
+          "two_factor_required": 89,
+          "rejected": 7
+        },
+        "additional_fraud_2fa": 25,
+        "additional_legitimate_2fa": 0,
+        "additional_fraud_recall": 0.08333333333333333,
+        "baseline_approved_legitimate": 529,
+        "additional_legitimate_rate": 0.0,
+        "additional_legitimate_rate_ci95": [
+          0.0,
+          0.0072093842494842545
+        ],
+        "additional_rejections": 0,
+        "available_scores": 900,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_changed_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_habitual": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_shared_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_direct": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_first_repass": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_two_hops": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 25,
+            "additional_rate": 0.5
+          },
+          "normal": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_slow": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "test": {
+        "threshold": 0.999517,
+        "precision": 1.0,
+        "recall": 0.08333333333333333,
+        "false_positive_rate": 0.0,
+        "f1": 0.15384615384615385,
+        "roc_auc": 0.9100347222222223,
+        "true_positive": 50,
+        "false_positive": 0,
+        "true_negative": 1200,
+        "false_negative": 550,
+        "threshold_score_0_100": 99.9517,
+        "baseline_statuses": {
+          "approved": 1661,
+          "two_factor_required": 126,
+          "rejected": 13
+        },
+        "proposed_statuses": {
+          "approved": 1611,
+          "two_factor_required": 176,
+          "rejected": 13
+        },
+        "additional_fraud_2fa": 50,
+        "additional_legitimate_2fa": 0,
+        "additional_fraud_recall": 0.08333333333333333,
+        "baseline_approved_legitimate": 1061,
+        "additional_legitimate_rate": 0.0,
+        "additional_legitimate_rate_ci95": [
+          0.0,
+          0.0036075406238864137
+        ],
+        "additional_rejections": 0,
+        "available_scores": 1800,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_changed_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_habitual": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_shared_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_direct": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_first_repass": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_two_hops": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 50,
+            "additional_rate": 0.5
+          },
+          "normal": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_slow": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "numerical_gate": {
+        "additional_recall_at_least_5_percent": true,
+        "legitimate_rate_upper_ci95_at_most_1_percent": true,
+        "worst_legitimate_scenario_rate_at_most_5_percent": true,
+        "no_additional_rejections": true,
+        "score_coverage_at_least_95_percent": true
+      }
+    },
+    {
+      "model": "original-43",
+      "method": "corroborated_2fa",
+      "calibration": {
+        "threshold": 0.999507,
+        "precision": 0.0,
+        "recall": 0.0,
+        "false_positive_rate": 0.0,
+        "f1": 0.0,
+        "roc_auc": 0.663225,
+        "true_positive": 0,
+        "false_positive": 0,
+        "true_negative": 600,
+        "false_negative": 300,
+        "threshold_score_0_100": 99.9507,
+        "baseline_statuses": {
+          "approved": 829,
+          "two_factor_required": 64,
+          "rejected": 7
+        },
+        "proposed_statuses": {
+          "approved": 829,
+          "two_factor_required": 64,
+          "rejected": 7
+        },
+        "additional_fraud_2fa": 0,
+        "additional_legitimate_2fa": 0,
+        "additional_fraud_recall": 0.0,
+        "baseline_approved_legitimate": 529,
+        "additional_legitimate_rate": 0.0,
+        "additional_legitimate_rate_ci95": [
+          0.0,
+          0.0072093842494842545
+        ],
+        "additional_rejections": 0,
+        "available_scores": 900,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_changed_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_habitual": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_shared_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_direct": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_first_repass": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_two_hops": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "normal": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_slow": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "test": {
+        "threshold": 0.999507,
+        "precision": 0.0,
+        "recall": 0.0,
+        "false_positive_rate": 0.0025,
+        "f1": 0.0,
+        "roc_auc": 0.6635916666666667,
+        "true_positive": 0,
+        "false_positive": 3,
+        "true_negative": 1197,
+        "false_negative": 600,
+        "threshold_score_0_100": 99.9507,
+        "baseline_statuses": {
+          "approved": 1661,
+          "two_factor_required": 126,
+          "rejected": 13
+        },
+        "proposed_statuses": {
+          "approved": 1658,
+          "two_factor_required": 129,
+          "rejected": 13
+        },
+        "additional_fraud_2fa": 0,
+        "additional_legitimate_2fa": 3,
+        "additional_fraud_recall": 0.0,
+        "baseline_approved_legitimate": 1061,
+        "additional_legitimate_rate": 0.002827521206409048,
+        "additional_legitimate_rate_ci95": [
+          0.0009620681891288918,
+          0.008280114052341577
+        ],
+        "additional_rejections": 0,
+        "available_scores": 1800,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_changed_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 3,
+            "additional_rate": 0.03
+          },
+          "contract_habitual": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_shared_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_direct": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_first_repass": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_two_hops": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "normal": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_slow": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "numerical_gate": {
+        "additional_recall_at_least_5_percent": false,
+        "legitimate_rate_upper_ci95_at_most_1_percent": true,
+        "worst_legitimate_scenario_rate_at_most_5_percent": true,
+        "no_additional_rejections": true,
+        "score_coverage_at_least_95_percent": true
+      }
+    },
+    {
+      "model": "original-44",
+      "method": "score_only_2fa",
+      "calibration": {
+        "threshold": 0.999571,
+        "precision": 1.0,
+        "recall": 0.05,
+        "false_positive_rate": 0.0,
+        "f1": 0.09523809523809523,
+        "roc_auc": 0.8760333333333333,
+        "true_positive": 15,
+        "false_positive": 0,
+        "true_negative": 600,
+        "false_negative": 285,
+        "threshold_score_0_100": 99.9571,
+        "baseline_statuses": {
+          "approved": 829,
+          "two_factor_required": 64,
+          "rejected": 7
+        },
+        "proposed_statuses": {
+          "approved": 814,
+          "two_factor_required": 79,
+          "rejected": 7
+        },
+        "additional_fraud_2fa": 15,
+        "additional_legitimate_2fa": 0,
+        "additional_fraud_recall": 0.05,
+        "baseline_approved_legitimate": 529,
+        "additional_legitimate_rate": 0.0,
+        "additional_legitimate_rate_ci95": [
+          0.0,
+          0.0072093842494842545
+        ],
+        "additional_rejections": 0,
+        "available_scores": 900,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_changed_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_habitual": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_shared_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_direct": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_first_repass": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_two_hops": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 15,
+            "additional_rate": 0.3
+          },
+          "normal": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_slow": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "test": {
+        "threshold": 0.999571,
+        "precision": 1.0,
+        "recall": 0.055,
+        "false_positive_rate": 0.0,
+        "f1": 0.1042654028436019,
+        "roc_auc": 0.8785638888888889,
+        "true_positive": 33,
+        "false_positive": 0,
+        "true_negative": 1200,
+        "false_negative": 567,
+        "threshold_score_0_100": 99.9571,
+        "baseline_statuses": {
+          "approved": 1661,
+          "two_factor_required": 126,
+          "rejected": 13
+        },
+        "proposed_statuses": {
+          "approved": 1628,
+          "two_factor_required": 159,
+          "rejected": 13
+        },
+        "additional_fraud_2fa": 33,
+        "additional_legitimate_2fa": 0,
+        "additional_fraud_recall": 0.055,
+        "baseline_approved_legitimate": 1061,
+        "additional_legitimate_rate": 0.0,
+        "additional_legitimate_rate_ci95": [
+          0.0,
+          0.0036075406238864137
+        ],
+        "additional_rejections": 0,
+        "available_scores": 1800,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_changed_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_habitual": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_shared_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_direct": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_first_repass": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_two_hops": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 33,
+            "additional_rate": 0.33
+          },
+          "normal": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_slow": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "numerical_gate": {
+        "additional_recall_at_least_5_percent": true,
+        "legitimate_rate_upper_ci95_at_most_1_percent": true,
+        "worst_legitimate_scenario_rate_at_most_5_percent": true,
+        "no_additional_rejections": true,
+        "score_coverage_at_least_95_percent": true
+      }
+    },
+    {
+      "model": "original-44",
+      "method": "corroborated_2fa",
+      "calibration": {
+        "threshold": 0.9995560000000001,
+        "precision": 0.0,
+        "recall": 0.0,
+        "false_positive_rate": 0.0,
+        "f1": 0.0,
+        "roc_auc": 0.6487861111111111,
+        "true_positive": 0,
+        "false_positive": 0,
+        "true_negative": 600,
+        "false_negative": 300,
+        "threshold_score_0_100": 99.9556,
+        "baseline_statuses": {
+          "approved": 829,
+          "two_factor_required": 64,
+          "rejected": 7
+        },
+        "proposed_statuses": {
+          "approved": 829,
+          "two_factor_required": 64,
+          "rejected": 7
+        },
+        "additional_fraud_2fa": 0,
+        "additional_legitimate_2fa": 0,
+        "additional_fraud_recall": 0.0,
+        "baseline_approved_legitimate": 529,
+        "additional_legitimate_rate": 0.0,
+        "additional_legitimate_rate_ci95": [
+          0.0,
+          0.0072093842494842545
+        ],
+        "additional_rejections": 0,
+        "available_scores": 900,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_changed_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_habitual": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_shared_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_direct": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_first_repass": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_two_hops": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "normal": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_slow": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "test": {
+        "threshold": 0.9995560000000001,
+        "precision": 0.0,
+        "recall": 0.0,
+        "false_positive_rate": 0.0033333333333333335,
+        "f1": 0.0,
+        "roc_auc": 0.6493347222222222,
+        "true_positive": 0,
+        "false_positive": 4,
+        "true_negative": 1196,
+        "false_negative": 600,
+        "threshold_score_0_100": 99.9556,
+        "baseline_statuses": {
+          "approved": 1661,
+          "two_factor_required": 126,
+          "rejected": 13
+        },
+        "proposed_statuses": {
+          "approved": 1657,
+          "two_factor_required": 130,
+          "rejected": 13
+        },
+        "additional_fraud_2fa": 0,
+        "additional_legitimate_2fa": 4,
+        "additional_fraud_recall": 0.0,
+        "baseline_approved_legitimate": 1061,
+        "additional_legitimate_rate": 0.003770028275212064,
+        "additional_legitimate_rate_ci95": [
+          0.0014670374664035347,
+          0.00965335864759495
+        ],
+        "additional_rejections": 0,
+        "available_scores": 1800,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_changed_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 4,
+            "additional_rate": 0.04
+          },
+          "contract_habitual": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_shared_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_direct": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_first_repass": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_two_hops": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "normal": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_slow": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "numerical_gate": {
+        "additional_recall_at_least_5_percent": false,
+        "legitimate_rate_upper_ci95_at_most_1_percent": true,
+        "worst_legitimate_scenario_rate_at_most_5_percent": true,
+        "no_additional_rejections": true,
+        "score_coverage_at_least_95_percent": true
+      }
+    },
+    {
+      "model": "candidate-42",
+      "method": "score_only_2fa",
+      "calibration": {
+        "threshold": 0.5992770000000001,
+        "precision": 0.980544747081712,
+        "recall": 0.84,
+        "false_positive_rate": 0.008333333333333333,
+        "f1": 0.9048473967684021,
+        "roc_auc": 0.9860111111111111,
+        "true_positive": 252,
+        "false_positive": 5,
+        "true_negative": 595,
+        "false_negative": 48,
+        "threshold_score_0_100": 59.92770000000001,
+        "baseline_statuses": {
+          "approved": 829,
+          "two_factor_required": 64,
+          "rejected": 7
+        },
+        "proposed_statuses": {
+          "approved": 572,
+          "two_factor_required": 321,
+          "rejected": 7
+        },
+        "additional_fraud_2fa": 252,
+        "additional_legitimate_2fa": 5,
+        "additional_fraud_recall": 0.84,
+        "baseline_approved_legitimate": 529,
+        "additional_legitimate_rate": 0.00945179584120983,
+        "additional_legitimate_rate_ci95": [
+          0.004043808522787129,
+          0.021932884152982866
+        ],
+        "additional_rejections": 0,
+        "available_scores": 900,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 2,
+            "additional_rate": 0.04
+          },
+          "contract_changed_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_habitual": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 50,
+            "additional_rate": 1.0
+          },
+          "contract_shared_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 3,
+            "additional_rate": 0.06
+          },
+          "mule_direct": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 2,
+            "additional_rate": 0.04
+          },
+          "mule_first_repass": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 50,
+            "additional_rate": 1.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 50,
+            "additional_rate": 1.0
+          },
+          "mule_two_hops": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 50,
+            "additional_rate": 1.0
+          },
+          "normal": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 50,
+            "additional_rate": 1.0
+          },
+          "temporal_slow": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "test": {
+        "threshold": 0.5992770000000001,
+        "precision": 0.9901768172888016,
+        "recall": 0.84,
+        "false_positive_rate": 0.004166666666666667,
+        "f1": 0.9089269612263301,
+        "roc_auc": 0.9866979166666666,
+        "true_positive": 504,
+        "false_positive": 5,
+        "true_negative": 1195,
+        "false_negative": 96,
+        "threshold_score_0_100": 59.92770000000001,
+        "baseline_statuses": {
+          "approved": 1661,
+          "two_factor_required": 126,
+          "rejected": 13
+        },
+        "proposed_statuses": {
+          "approved": 1152,
+          "two_factor_required": 635,
+          "rejected": 13
+        },
+        "additional_fraud_2fa": 504,
+        "additional_legitimate_2fa": 5,
+        "additional_fraud_recall": 0.84,
+        "baseline_approved_legitimate": 1061,
+        "additional_legitimate_rate": 0.00471253534401508,
+        "additional_legitimate_rate_ci95": [
+          0.002014542764260766,
+          0.010984067222265737
+        ],
+        "additional_rejections": 0,
+        "available_scores": 1800,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 4,
+            "additional_rate": 0.04
+          },
+          "contract_changed_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_habitual": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 100,
+            "additional_rate": 1.0
+          },
+          "contract_shared_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 1,
+            "additional_rate": 0.01
+          },
+          "mule_direct": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 4,
+            "additional_rate": 0.04
+          },
+          "mule_first_repass": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 100,
+            "additional_rate": 1.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 100,
+            "additional_rate": 1.0
+          },
+          "mule_two_hops": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 100,
+            "additional_rate": 1.0
+          },
+          "normal": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 100,
+            "additional_rate": 1.0
+          },
+          "temporal_slow": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "numerical_gate": {
+        "additional_recall_at_least_5_percent": true,
+        "legitimate_rate_upper_ci95_at_most_1_percent": false,
+        "worst_legitimate_scenario_rate_at_most_5_percent": true,
+        "no_additional_rejections": true,
+        "score_coverage_at_least_95_percent": true
+      }
+    },
+    {
+      "model": "candidate-42",
+      "method": "corroborated_2fa",
+      "calibration": {
+        "threshold": 0.588198,
+        "precision": 0.9626865671641791,
+        "recall": 0.43,
+        "false_positive_rate": 0.008333333333333333,
+        "f1": 0.5944700460829494,
+        "roc_auc": 0.7051527777777777,
+        "true_positive": 129,
+        "false_positive": 5,
+        "true_negative": 595,
+        "false_negative": 171,
+        "threshold_score_0_100": 58.8198,
+        "baseline_statuses": {
+          "approved": 829,
+          "two_factor_required": 64,
+          "rejected": 7
+        },
+        "proposed_statuses": {
+          "approved": 695,
+          "two_factor_required": 198,
+          "rejected": 7
+        },
+        "additional_fraud_2fa": 129,
+        "additional_legitimate_2fa": 5,
+        "additional_fraud_recall": 0.43,
+        "baseline_approved_legitimate": 529,
+        "additional_legitimate_rate": 0.00945179584120983,
+        "additional_legitimate_rate_ci95": [
+          0.004043808522787129,
+          0.021932884152982866
+        ],
+        "additional_rejections": 0,
+        "available_scores": 900,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 4,
+            "additional_rate": 0.08
+          },
+          "contract_changed_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_habitual": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 50,
+            "additional_rate": 1.0
+          },
+          "contract_shared_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 1,
+            "additional_rate": 0.02
+          },
+          "mule_direct": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 4,
+            "additional_rate": 0.08
+          },
+          "mule_first_repass": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 25,
+            "additional_rate": 0.5
+          },
+          "mule_two_hops": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 25,
+            "additional_rate": 0.5
+          },
+          "normal": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 25,
+            "additional_rate": 0.5
+          },
+          "temporal_slow": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "test": {
+        "threshold": 0.588198,
+        "precision": 0.98828125,
+        "recall": 0.4216666666666667,
+        "false_positive_rate": 0.0025,
+        "f1": 0.5911214953271029,
+        "roc_auc": 0.7050416666666667,
+        "true_positive": 253,
+        "false_positive": 3,
+        "true_negative": 1197,
+        "false_negative": 347,
+        "threshold_score_0_100": 58.8198,
+        "baseline_statuses": {
+          "approved": 1661,
+          "two_factor_required": 126,
+          "rejected": 13
+        },
+        "proposed_statuses": {
+          "approved": 1405,
+          "two_factor_required": 382,
+          "rejected": 13
+        },
+        "additional_fraud_2fa": 253,
+        "additional_legitimate_2fa": 3,
+        "additional_fraud_recall": 0.4216666666666667,
+        "baseline_approved_legitimate": 1061,
+        "additional_legitimate_rate": 0.002827521206409048,
+        "additional_legitimate_rate_ci95": [
+          0.0009620681891288918,
+          0.008280114052341577
+        ],
+        "additional_rejections": 0,
+        "available_scores": 1800,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 3,
+            "additional_rate": 0.03
+          },
+          "contract_changed_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_habitual": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 100,
+            "additional_rate": 1.0
+          },
+          "contract_shared_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_direct": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 3,
+            "additional_rate": 0.03
+          },
+          "mule_first_repass": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 50,
+            "additional_rate": 0.5
+          },
+          "mule_two_hops": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 50,
+            "additional_rate": 0.5
+          },
+          "normal": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 50,
+            "additional_rate": 0.5
+          },
+          "temporal_slow": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "numerical_gate": {
+        "additional_recall_at_least_5_percent": true,
+        "legitimate_rate_upper_ci95_at_most_1_percent": true,
+        "worst_legitimate_scenario_rate_at_most_5_percent": true,
+        "no_additional_rejections": true,
+        "score_coverage_at_least_95_percent": true
+      }
+    },
+    {
+      "model": "candidate-43",
+      "method": "score_only_2fa",
+      "calibration": {
+        "threshold": 0.620353,
+        "precision": 0.9806949806949807,
+        "recall": 0.8466666666666667,
+        "false_positive_rate": 0.008333333333333333,
+        "f1": 0.9087656529516995,
+        "roc_auc": 0.9859444444444444,
+        "true_positive": 254,
+        "false_positive": 5,
+        "true_negative": 595,
+        "false_negative": 46,
+        "threshold_score_0_100": 62.03530000000001,
+        "baseline_statuses": {
+          "approved": 829,
+          "two_factor_required": 64,
+          "rejected": 7
+        },
+        "proposed_statuses": {
+          "approved": 570,
+          "two_factor_required": 323,
+          "rejected": 7
+        },
+        "additional_fraud_2fa": 254,
+        "additional_legitimate_2fa": 5,
+        "additional_fraud_recall": 0.8466666666666667,
+        "baseline_approved_legitimate": 529,
+        "additional_legitimate_rate": 0.00945179584120983,
+        "additional_legitimate_rate_ci95": [
+          0.004043808522787129,
+          0.021932884152982866
+        ],
+        "additional_rejections": 0,
+        "available_scores": 900,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 4,
+            "additional_rate": 0.08
+          },
+          "contract_changed_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_habitual": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 50,
+            "additional_rate": 1.0
+          },
+          "contract_shared_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 1,
+            "additional_rate": 0.02
+          },
+          "mule_direct": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 4,
+            "additional_rate": 0.08
+          },
+          "mule_first_repass": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 50,
+            "additional_rate": 1.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 50,
+            "additional_rate": 1.0
+          },
+          "mule_two_hops": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 50,
+            "additional_rate": 1.0
+          },
+          "normal": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 50,
+            "additional_rate": 1.0
+          },
+          "temporal_slow": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "test": {
+        "threshold": 0.620353,
+        "precision": 0.996031746031746,
+        "recall": 0.8366666666666667,
+        "false_positive_rate": 0.0016666666666666668,
+        "f1": 0.9094202898550725,
+        "roc_auc": 0.9863444444444445,
+        "true_positive": 502,
+        "false_positive": 2,
+        "true_negative": 1198,
+        "false_negative": 98,
+        "threshold_score_0_100": 62.03530000000001,
+        "baseline_statuses": {
+          "approved": 1661,
+          "two_factor_required": 126,
+          "rejected": 13
+        },
+        "proposed_statuses": {
+          "approved": 1157,
+          "two_factor_required": 630,
+          "rejected": 13
+        },
+        "additional_fraud_2fa": 502,
+        "additional_legitimate_2fa": 2,
+        "additional_fraud_recall": 0.8366666666666667,
+        "baseline_approved_legitimate": 1061,
+        "additional_legitimate_rate": 0.001885014137606032,
+        "additional_legitimate_rate_ci95": [
+          0.0005170911639201122,
+          0.006846877205022337
+        ],
+        "additional_rejections": 0,
+        "available_scores": 1800,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 2,
+            "additional_rate": 0.02
+          },
+          "contract_changed_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_habitual": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 100,
+            "additional_rate": 1.0
+          },
+          "contract_shared_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_direct": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 2,
+            "additional_rate": 0.02
+          },
+          "mule_first_repass": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 100,
+            "additional_rate": 1.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 100,
+            "additional_rate": 1.0
+          },
+          "mule_two_hops": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 100,
+            "additional_rate": 1.0
+          },
+          "normal": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 100,
+            "additional_rate": 1.0
+          },
+          "temporal_slow": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "numerical_gate": {
+        "additional_recall_at_least_5_percent": true,
+        "legitimate_rate_upper_ci95_at_most_1_percent": true,
+        "worst_legitimate_scenario_rate_at_most_5_percent": true,
+        "no_additional_rejections": true,
+        "score_coverage_at_least_95_percent": true
+      }
+    },
+    {
+      "model": "candidate-43",
+      "method": "corroborated_2fa",
+      "calibration": {
+        "threshold": 0.620353,
+        "precision": 0.9626865671641791,
+        "recall": 0.43,
+        "false_positive_rate": 0.008333333333333333,
+        "f1": 0.5944700460829494,
+        "roc_auc": 0.7051416666666667,
+        "true_positive": 129,
+        "false_positive": 5,
+        "true_negative": 595,
+        "false_negative": 171,
+        "threshold_score_0_100": 62.03530000000001,
+        "baseline_statuses": {
+          "approved": 829,
+          "two_factor_required": 64,
+          "rejected": 7
+        },
+        "proposed_statuses": {
+          "approved": 695,
+          "two_factor_required": 198,
+          "rejected": 7
+        },
+        "additional_fraud_2fa": 129,
+        "additional_legitimate_2fa": 5,
+        "additional_fraud_recall": 0.43,
+        "baseline_approved_legitimate": 529,
+        "additional_legitimate_rate": 0.00945179584120983,
+        "additional_legitimate_rate_ci95": [
+          0.004043808522787129,
+          0.021932884152982866
+        ],
+        "additional_rejections": 0,
+        "available_scores": 900,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 4,
+            "additional_rate": 0.08
+          },
+          "contract_changed_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_habitual": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 50,
+            "additional_rate": 1.0
+          },
+          "contract_shared_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 1,
+            "additional_rate": 0.02
+          },
+          "mule_direct": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 4,
+            "additional_rate": 0.08
+          },
+          "mule_first_repass": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 25,
+            "additional_rate": 0.5
+          },
+          "mule_two_hops": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 25,
+            "additional_rate": 0.5
+          },
+          "normal": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 25,
+            "additional_rate": 0.5
+          },
+          "temporal_slow": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "test": {
+        "threshold": 0.620353,
+        "precision": 0.9921259842519685,
+        "recall": 0.42,
+        "false_positive_rate": 0.0016666666666666668,
+        "f1": 0.5901639344262295,
+        "roc_auc": 0.7050097222222222,
+        "true_positive": 252,
+        "false_positive": 2,
+        "true_negative": 1198,
+        "false_negative": 348,
+        "threshold_score_0_100": 62.03530000000001,
+        "baseline_statuses": {
+          "approved": 1661,
+          "two_factor_required": 126,
+          "rejected": 13
+        },
+        "proposed_statuses": {
+          "approved": 1407,
+          "two_factor_required": 380,
+          "rejected": 13
+        },
+        "additional_fraud_2fa": 252,
+        "additional_legitimate_2fa": 2,
+        "additional_fraud_recall": 0.42,
+        "baseline_approved_legitimate": 1061,
+        "additional_legitimate_rate": 0.001885014137606032,
+        "additional_legitimate_rate_ci95": [
+          0.0005170911639201122,
+          0.006846877205022337
+        ],
+        "additional_rejections": 0,
+        "available_scores": 1800,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 2,
+            "additional_rate": 0.02
+          },
+          "contract_changed_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_habitual": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 100,
+            "additional_rate": 1.0
+          },
+          "contract_shared_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_direct": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 2,
+            "additional_rate": 0.02
+          },
+          "mule_first_repass": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 50,
+            "additional_rate": 0.5
+          },
+          "mule_two_hops": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 50,
+            "additional_rate": 0.5
+          },
+          "normal": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 50,
+            "additional_rate": 0.5
+          },
+          "temporal_slow": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "numerical_gate": {
+        "additional_recall_at_least_5_percent": true,
+        "legitimate_rate_upper_ci95_at_most_1_percent": true,
+        "worst_legitimate_scenario_rate_at_most_5_percent": true,
+        "no_additional_rejections": true,
+        "score_coverage_at_least_95_percent": true
+      }
+    },
+    {
+      "model": "candidate-44",
+      "method": "score_only_2fa",
+      "calibration": {
+        "threshold": 0.643777,
+        "precision": 0.9881889763779528,
+        "recall": 0.8366666666666667,
+        "false_positive_rate": 0.005,
+        "f1": 0.9061371841155236,
+        "roc_auc": 0.9857611111111111,
+        "true_positive": 251,
+        "false_positive": 3,
+        "true_negative": 597,
+        "false_negative": 49,
+        "threshold_score_0_100": 64.3777,
+        "baseline_statuses": {
+          "approved": 829,
+          "two_factor_required": 64,
+          "rejected": 7
+        },
+        "proposed_statuses": {
+          "approved": 575,
+          "two_factor_required": 318,
+          "rejected": 7
+        },
+        "additional_fraud_2fa": 251,
+        "additional_legitimate_2fa": 3,
+        "additional_fraud_recall": 0.8366666666666667,
+        "baseline_approved_legitimate": 529,
+        "additional_legitimate_rate": 0.005671077504725898,
+        "additional_legitimate_rate_ci95": [
+          0.0019305136081659907,
+          0.016539255697089708
+        ],
+        "additional_rejections": 0,
+        "available_scores": 900,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 1,
+            "additional_rate": 0.02
+          },
+          "contract_changed_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_habitual": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 50,
+            "additional_rate": 1.0
+          },
+          "contract_shared_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 2,
+            "additional_rate": 0.04
+          },
+          "mule_direct": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 1,
+            "additional_rate": 0.02
+          },
+          "mule_first_repass": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 50,
+            "additional_rate": 1.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 50,
+            "additional_rate": 1.0
+          },
+          "mule_two_hops": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 50,
+            "additional_rate": 1.0
+          },
+          "normal": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 50,
+            "additional_rate": 1.0
+          },
+          "temporal_slow": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "test": {
+        "threshold": 0.643777,
+        "precision": 0.9921104536489151,
+        "recall": 0.8383333333333334,
+        "false_positive_rate": 0.0033333333333333335,
+        "f1": 0.908762420957543,
+        "roc_auc": 0.9862888888888889,
+        "true_positive": 503,
+        "false_positive": 4,
+        "true_negative": 1196,
+        "false_negative": 97,
+        "threshold_score_0_100": 64.3777,
+        "baseline_statuses": {
+          "approved": 1661,
+          "two_factor_required": 126,
+          "rejected": 13
+        },
+        "proposed_statuses": {
+          "approved": 1154,
+          "two_factor_required": 633,
+          "rejected": 13
+        },
+        "additional_fraud_2fa": 503,
+        "additional_legitimate_2fa": 4,
+        "additional_fraud_recall": 0.8383333333333334,
+        "baseline_approved_legitimate": 1061,
+        "additional_legitimate_rate": 0.003770028275212064,
+        "additional_legitimate_rate_ci95": [
+          0.0014670374664035347,
+          0.00965335864759495
+        ],
+        "additional_rejections": 0,
+        "available_scores": 1800,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 3,
+            "additional_rate": 0.03
+          },
+          "contract_changed_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_habitual": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 100,
+            "additional_rate": 1.0
+          },
+          "contract_shared_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 1,
+            "additional_rate": 0.01
+          },
+          "mule_direct": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 3,
+            "additional_rate": 0.03
+          },
+          "mule_first_repass": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 100,
+            "additional_rate": 1.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 100,
+            "additional_rate": 1.0
+          },
+          "mule_two_hops": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 100,
+            "additional_rate": 1.0
+          },
+          "normal": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 100,
+            "additional_rate": 1.0
+          },
+          "temporal_slow": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "numerical_gate": {
+        "additional_recall_at_least_5_percent": true,
+        "legitimate_rate_upper_ci95_at_most_1_percent": true,
+        "worst_legitimate_scenario_rate_at_most_5_percent": true,
+        "no_additional_rejections": true,
+        "score_coverage_at_least_95_percent": true
+      }
+    },
+    {
+      "model": "candidate-44",
+      "method": "corroborated_2fa",
+      "calibration": {
+        "threshold": 0.6233420000000001,
+        "precision": 0.9626865671641791,
+        "recall": 0.43,
+        "false_positive_rate": 0.008333333333333333,
+        "f1": 0.5944700460829494,
+        "roc_auc": 0.7051472222222223,
+        "true_positive": 129,
+        "false_positive": 5,
+        "true_negative": 595,
+        "false_negative": 171,
+        "threshold_score_0_100": 62.33420000000001,
+        "baseline_statuses": {
+          "approved": 829,
+          "two_factor_required": 64,
+          "rejected": 7
+        },
+        "proposed_statuses": {
+          "approved": 695,
+          "two_factor_required": 198,
+          "rejected": 7
+        },
+        "additional_fraud_2fa": 129,
+        "additional_legitimate_2fa": 5,
+        "additional_fraud_recall": 0.43,
+        "baseline_approved_legitimate": 529,
+        "additional_legitimate_rate": 0.00945179584120983,
+        "additional_legitimate_rate_ci95": [
+          0.004043808522787129,
+          0.021932884152982866
+        ],
+        "additional_rejections": 0,
+        "available_scores": 900,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 4,
+            "additional_rate": 0.08
+          },
+          "contract_changed_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_habitual": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 43,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 50,
+            "additional_rate": 1.0
+          },
+          "contract_shared_device": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 1,
+            "additional_rate": 0.02
+          },
+          "mule_direct": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 4,
+            "additional_rate": 0.08
+          },
+          "mule_first_repass": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 25,
+            "additional_rate": 0.5
+          },
+          "mule_two_hops": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 25,
+            "additional_rate": 0.5
+          },
+          "normal": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 50,
+            "label": 1,
+            "baseline_approved": 50,
+            "additional_2fa": 25,
+            "additional_rate": 0.5
+          },
+          "temporal_slow": {
+            "samples": 50,
+            "label": 0,
+            "baseline_approved": 50,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "test": {
+        "threshold": 0.6233420000000001,
+        "precision": 0.9921259842519685,
+        "recall": 0.42,
+        "false_positive_rate": 0.0016666666666666668,
+        "f1": 0.5901639344262295,
+        "roc_auc": 0.7049986111111111,
+        "true_positive": 252,
+        "false_positive": 2,
+        "true_negative": 1198,
+        "false_negative": 348,
+        "threshold_score_0_100": 62.33420000000001,
+        "baseline_statuses": {
+          "approved": 1661,
+          "two_factor_required": 126,
+          "rejected": 13
+        },
+        "proposed_statuses": {
+          "approved": 1407,
+          "two_factor_required": 380,
+          "rejected": 13
+        },
+        "additional_fraud_2fa": 252,
+        "additional_legitimate_2fa": 2,
+        "additional_fraud_recall": 0.42,
+        "baseline_approved_legitimate": 1061,
+        "additional_legitimate_rate": 0.001885014137606032,
+        "additional_legitimate_rate_ci95": [
+          0.0005170911639201122,
+          0.006846877205022337
+        ],
+        "additional_rejections": 0,
+        "available_scores": 1800,
+        "by_scenario": {
+          "ambiguous_legitimate_repass": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 2,
+            "additional_rate": 0.02
+          },
+          "contract_changed_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_habitual": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_new_recipient": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 87,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "contract_risky_senders": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 100,
+            "additional_rate": 1.0
+          },
+          "contract_shared_device": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 0,
+            "additional_2fa": 0,
+            "additional_rate": null
+          },
+          "innocent_payer": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "merchant_fast_settlement": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_direct": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 2,
+            "additional_rate": 0.02
+          },
+          "mule_first_repass": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "mule_no_risky_neighbor": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 50,
+            "additional_rate": 0.5
+          },
+          "mule_two_hops": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 50,
+            "additional_rate": 0.5
+          },
+          "normal": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "stale_contact": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          },
+          "temporal_fast": {
+            "samples": 100,
+            "label": 1,
+            "baseline_approved": 100,
+            "additional_2fa": 50,
+            "additional_rate": 0.5
+          },
+          "temporal_slow": {
+            "samples": 100,
+            "label": 0,
+            "baseline_approved": 100,
+            "additional_2fa": 0,
+            "additional_rate": 0.0
+          }
+        }
+      },
+      "numerical_gate": {
+        "additional_recall_at_least_5_percent": true,
+        "legitimate_rate_upper_ci95_at_most_1_percent": true,
+        "worst_legitimate_scenario_rate_at_most_5_percent": true,
+        "no_additional_rejections": true,
+        "score_coverage_at_least_95_percent": true
+      }
+    }
+  ],
+  "bootcamp_regressions": [
+    {
+      "id": "pix-000123",
+      "kind": "original_first_pix",
+      "label": null,
+      "amount": 150000,
+      "no_history_min_amount": 50000,
+      "baseline_status": "two_factor_required",
+      "baseline_score": 30,
+      "history_supplied": 0,
+      "history_selected": 0,
+      "live_scores": {
+        "original-42": null,
+        "original-43": null,
+        "original-44": null,
+        "candidate-42": null,
+        "candidate-43": null,
+        "candidate-44": null
+      },
+      "full_scores": {
+        "original-42": null,
+        "original-43": null,
+        "original-44": null,
+        "candidate-42": null,
+        "candidate-43": null,
+        "candidate-44": null
+      },
+      "live_statuses": {
+        "original-42": "insufficient_history",
+        "original-43": "insufficient_history",
+        "original-44": "insufficient_history",
+        "candidate-42": "insufficient_history",
+        "candidate-43": "insufficient_history",
+        "candidate-44": "insufficient_history"
+      },
+      "live_rapid_pairs": 0,
+      "full_rapid_pairs": 0,
+      "proposals": {
+        "original-42/score_only_2fa": "two_factor_required",
+        "original-42/corroborated_2fa": "two_factor_required",
+        "original-43/score_only_2fa": "two_factor_required",
+        "original-43/corroborated_2fa": "two_factor_required",
+        "original-44/score_only_2fa": "two_factor_required",
+        "original-44/corroborated_2fa": "two_factor_required",
+        "candidate-42/score_only_2fa": "two_factor_required",
+        "candidate-42/corroborated_2fa": "two_factor_required",
+        "candidate-43/score_only_2fa": "two_factor_required",
+        "candidate-43/corroborated_2fa": "two_factor_required",
+        "candidate-44/score_only_2fa": "two_factor_required",
+        "candidate-44/corroborated_2fa": "two_factor_required"
+      }
+    },
+    {
+      "id": "pix-000123",
+      "kind": "habitual_payment",
+      "label": 0,
+      "amount": 150000,
+      "no_history_min_amount": 50000,
+      "baseline_status": "approved",
+      "baseline_score": 0,
+      "history_supplied": 3,
+      "history_selected": 3,
+      "live_scores": {
+        "original-42": 0.6231,
+        "original-43": 1.2232,
+        "original-44": 2.6087,
+        "candidate-42": 0.0,
+        "candidate-43": 0.0007,
+        "candidate-44": 0.0
+      },
+      "full_scores": {
+        "original-42": 0.6231,
+        "original-43": 1.2232,
+        "original-44": 2.6087,
+        "candidate-42": 0.0,
+        "candidate-43": 0.0007,
+        "candidate-44": 0.0
+      },
+      "live_statuses": {
+        "original-42": "scored",
+        "original-43": "scored",
+        "original-44": "scored",
+        "candidate-42": "scored",
+        "candidate-43": "scored",
+        "candidate-44": "scored"
+      },
+      "live_rapid_pairs": 0.0,
+      "full_rapid_pairs": 0.0,
+      "proposals": {
+        "original-42/score_only_2fa": "approved",
+        "original-42/corroborated_2fa": "approved",
+        "original-43/score_only_2fa": "approved",
+        "original-43/corroborated_2fa": "approved",
+        "original-44/score_only_2fa": "approved",
+        "original-44/corroborated_2fa": "approved",
+        "candidate-42/score_only_2fa": "approved",
+        "candidate-42/corroborated_2fa": "approved",
+        "candidate-43/score_only_2fa": "approved",
+        "candidate-43/corroborated_2fa": "approved",
+        "candidate-44/score_only_2fa": "approved",
+        "candidate-44/corroborated_2fa": "approved"
+      }
+    },
+    {
+      "id": "pix-000123",
+      "kind": "new_recipient_without_other_risk",
+      "label": 0,
+      "amount": 150000,
+      "no_history_min_amount": 50000,
+      "baseline_status": "approved",
+      "baseline_score": 15,
+      "history_supplied": 3,
+      "history_selected": 3,
+      "live_scores": {
+        "original-42": 2.0567,
+        "original-43": 2.337,
+        "original-44": 5.8639,
+        "candidate-42": 0.0008,
+        "candidate-43": 0.0057,
+        "candidate-44": 0.0001
+      },
+      "full_scores": {
+        "original-42": 2.0567,
+        "original-43": 2.337,
+        "original-44": 5.8639,
+        "candidate-42": 0.0008,
+        "candidate-43": 0.0057,
+        "candidate-44": 0.0001
+      },
+      "live_statuses": {
+        "original-42": "scored",
+        "original-43": "scored",
+        "original-44": "scored",
+        "candidate-42": "scored",
+        "candidate-43": "scored",
+        "candidate-44": "scored"
+      },
+      "live_rapid_pairs": 0.0,
+      "full_rapid_pairs": 0.0,
+      "proposals": {
+        "original-42/score_only_2fa": "approved",
+        "original-42/corroborated_2fa": "approved",
+        "original-43/score_only_2fa": "approved",
+        "original-43/corroborated_2fa": "approved",
+        "original-44/score_only_2fa": "approved",
+        "original-44/corroborated_2fa": "approved",
+        "candidate-42/score_only_2fa": "approved",
+        "candidate-42/corroborated_2fa": "approved",
+        "candidate-43/score_only_2fa": "approved",
+        "candidate-43/corroborated_2fa": "approved",
+        "candidate-44/score_only_2fa": "approved",
+        "candidate-44/corroborated_2fa": "approved"
+      }
+    },
+    {
+      "id": "pix-000123",
+      "kind": "legitimate_fast_settlement",
+      "label": 0,
+      "amount": 150000,
+      "no_history_min_amount": 50000,
+      "baseline_status": "approved",
+      "baseline_score": 0,
+      "history_supplied": 7,
+      "history_selected": 7,
+      "live_scores": {
+        "original-42": 99.9511,
+        "original-43": 99.945,
+        "original-44": 99.9484,
+        "candidate-42": 0.6918,
+        "candidate-43": 2.248,
+        "candidate-44": 0.8911
+      },
+      "full_scores": {
+        "original-42": 99.9511,
+        "original-43": 99.945,
+        "original-44": 99.9484,
+        "candidate-42": 0.6918,
+        "candidate-43": 2.248,
+        "candidate-44": 0.8911
+      },
+      "live_statuses": {
+        "original-42": "scored",
+        "original-43": "scored",
+        "original-44": "scored",
+        "candidate-42": "scored",
+        "candidate-43": "scored",
+        "candidate-44": "scored"
+      },
+      "live_rapid_pairs": 2.0,
+      "full_rapid_pairs": 2.0,
+      "proposals": {
+        "original-42/score_only_2fa": "approved",
+        "original-42/corroborated_2fa": "approved",
+        "original-43/score_only_2fa": "approved",
+        "original-43/corroborated_2fa": "approved",
+        "original-44/score_only_2fa": "approved",
+        "original-44/corroborated_2fa": "approved",
+        "candidate-42/score_only_2fa": "approved",
+        "candidate-42/corroborated_2fa": "approved",
+        "candidate-43/score_only_2fa": "approved",
+        "candidate-43/corroborated_2fa": "approved",
+        "candidate-44/score_only_2fa": "approved",
+        "candidate-44/corroborated_2fa": "approved"
+      }
+    },
+    {
+      "id": "pix-000123",
+      "kind": "synthetic_mule_with_risky_senders",
+      "label": 1,
+      "amount": 150000,
+      "no_history_min_amount": 50000,
+      "baseline_status": "approved",
+      "baseline_score": 0,
+      "history_supplied": 17,
+      "history_selected": 17,
+      "live_scores": {
+        "original-42": 96.9456,
+        "original-43": 99.1021,
+        "original-44": 53.0589,
+        "candidate-42": 99.998,
+        "candidate-43": 99.9943,
+        "candidate-44": 99.9946
+      },
+      "full_scores": {
+        "original-42": 96.9456,
+        "original-43": 99.1021,
+        "original-44": 53.0589,
+        "candidate-42": 99.998,
+        "candidate-43": 99.9943,
+        "candidate-44": 99.9946
+      },
+      "live_statuses": {
+        "original-42": "scored",
+        "original-43": "scored",
+        "original-44": "scored",
+        "candidate-42": "scored",
+        "candidate-43": "scored",
+        "candidate-44": "scored"
+      },
+      "live_rapid_pairs": 2.0,
+      "full_rapid_pairs": 2.0,
+      "proposals": {
+        "original-42/score_only_2fa": "approved",
+        "original-42/corroborated_2fa": "approved",
+        "original-43/score_only_2fa": "approved",
+        "original-43/corroborated_2fa": "approved",
+        "original-44/score_only_2fa": "approved",
+        "original-44/corroborated_2fa": "approved",
+        "candidate-42/score_only_2fa": "two_factor_required",
+        "candidate-42/corroborated_2fa": "two_factor_required",
+        "candidate-43/score_only_2fa": "two_factor_required",
+        "candidate-43/corroborated_2fa": "two_factor_required",
+        "candidate-44/score_only_2fa": "two_factor_required",
+        "candidate-44/corroborated_2fa": "two_factor_required"
+      }
+    }
+  ],
+  "decision": {
+    "methods_passing_all_candidate_seeds": [
+      "corroborated_2fa"
+    ],
+    "enable_contribution": false,
+    "replace_default_model": false,
+    "retain_mode": "shadow"
+  },
+  "source_sha256": {
+    "scripts/improve_temporal_gnn.py": "2499d1424f1f17eb08f14e4c96dd0269110c7cd7930f4cb0c2a03fd0795e0b72",
+    "scripts/false_positive_cases.py": "9e997c52d65c9d37bdfadf039b83cb150be164c35387ccf1fe5998fbc3ebe4ed",
+    "scripts/train_temporal_gnn.py": "706848e347ffe613e711eda87de12f1195d97ca93e6095fadaf8afef33f39b98",
+    "scripts/validate_temporal_gnn.py": "6e276ccf1acedbf33da0a199ffac0e3582f9f0733a555d21443b28f280776473",
+    "scripts/bootcamp_graph_cases.py": "8e4366209d6772cb38d106acc563b4323bafc63b55a0591bdf17fb95a7aa6556",
+    "scripts/temporal_graph_examples.py": "10be4898977958a4d2c347bfe2d862665a698170a3c69a4c80a60d3737b7d3d8",
+    "scripts/evaluate_graph_untrust.py": "168ace77a50760595f11f8550c5e49097f2b1a8bd55d88d4b937d553bfeceed3",
+    "src/gnn/temporal_graph.py": "c3cf3dc692cf8902a37d85afed250cf8d2dd755043adc3c0fd5955957f7ab5cd",
+    "src/gnn/temporal_model.py": "ecdd557ec3c42a55345c7c8c4bae1c44e19cd8bbccbeb8d7481435ce42b5afee",
+    "src/controllers/pix_controller.py": "4a4c264ecbee00669151f9c085d7fca62f2583505d1de7b37a8e7e1b87022e4c",
+    "src/repositories/pix_repository.py": "0465f97ac902ef7fb0106ccc93bea78691febfa4dfe71537ac6cfab42e1210b6",
+    "config/risk-policy.json": "4ea7ed6b67950bb0971c4b030d4f4b421cf2049e88deab7b15851625ce0b3d41",
+    "examples/pix.json": "d6d0a3d035ae232faf4e9d724e60c6883d7bbec625aada632769945f2c7acf81"
+  }
+}

@@ -218,12 +218,8 @@ def test_post_get_and_retry_preserve_contextual_response_without_duplicating_his
     assert response["metadata"]["decision_causes"] == []
     assert post(api, payload) == response
     assert api("GET", "/pix/transaction/" + payload["id"])[1] == response
-    compact = request("GET", "/pix/transaction/" + payload["id"])[1]
-    assert compact["metadata"]["contextual_trust"] == {
-        "applied": True,
-        "reason": "compatible_relationship",
-        "profile_points_before": 80,
-        "profile_points_after": 0,
-    }
+    summary = request("GET", "/pix/transaction/" + payload["id"], include_details=True)[1]
+    assert "contextual_trust" not in summary["metadata"]
+    assert "Valor acima do perfil do cliente" not in summary["metadata"]["rules"]
     with Session(database_engine) as session:
         assert session.scalar(select(func.count()).where(PixAnalysis.transaction_id == payload["id"])) == 1

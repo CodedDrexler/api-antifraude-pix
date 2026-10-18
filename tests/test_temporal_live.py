@@ -1,6 +1,7 @@
 """Live shadow contract, receipt-clock separation and optional-model failures."""
 
 from copy import deepcopy
+from dataclasses import replace
 from datetime import timedelta
 from unittest.mock import Mock
 
@@ -8,10 +9,10 @@ import pytest
 from conftest import post, seed_profile
 from sqlalchemy.exc import OperationalError
 
-from src.constants import Policy
+from src.constants import FactorWeights, Policy
 from src.controllers.account_untrust import UntrustHistory
 from src.controllers.pix_controller import PixController
-from src.gnn.graph import parse_date
+from src.gnn.common import parse_date
 from src.gnn.temporal_graph import GraphEvent, build_temporal_graph
 from src.gnn.temporal_service import TemporalGraphService, TemporalHistory
 from src.models.pix import PixAnalysis
@@ -73,9 +74,9 @@ def test_missing_v2_model_has_explicit_zero_contribution(tmp_path, payload, mode
     assert result["applied_points"] == 0 and result["decision_override"] is False
 
 
-@pytest.mark.parametrize("mode", ["contribute", "on", "typo"])
+@pytest.mark.parametrize("mode", ["on", "typo"])
 def test_unvalidated_v2_contribution_cannot_be_enabled_accidentally(mode):
-    with pytest.raises(ValueError, match="off or shadow"):
+    with pytest.raises(ValueError, match="off, shadow or contribute"):
         TemporalGraphService(mode)
 
 
@@ -120,7 +121,7 @@ def test_http_v2_runs_by_default_and_saved_evidence_is_replayed(api, payload):
     seed_profile(api, payload, 3)
     result = post(api, payload)
     observed = result["metadata"]["gnn_v2"]
-    assert observed["mode"] == "shadow" and observed["status"] == "scored"
+    assert observed["mode"] == "contribute" and observed["status"] == "scored"
     assert observed["applied_points"] == 0 and observed["decision_override"] is False
     assert len(observed["model_sha256"]) == 64
     assert result["metadata"]["policy"]["gnn_v2"]["model_sha256"] == observed["model_sha256"]
@@ -146,6 +147,43 @@ def mocked_controller(service):
     repository.create.side_effect = lambda **values: PixAnalysis(**values)
     controller.repository = repository
     return controller
+
+
+@pytest.mark.parametrize(
+    "registered,amount,expected,source",
+    [
+        (0, 50_000, "two_factor_required", "first_transaction"),
+        (2, 50_000, "two_factor_required", "insufficient_history"),
+        (0, 49_999, "approved", "risk_score"),
+        (2, 49_999, "approved", "risk_score"),
+        (0, 3_000_000, "rejected", "hard_limit"),
+        (2, 3_000_000, "rejected", "hard_limit"),
+    ],
+)
+def test_maximum_v2_prediction_preserves_zero_weight_mandatory_decisions(
+    payload, registered, amount, expected, source
+):
+    payload["amount"] = amount
+    service = TemporalGraphService()
+    service.model.predict = Mock(return_value=1.0)
+    controller = mocked_controller(service)
+    policy = controller.engine.policy
+    controller.engine.policy = replace(
+        policy,
+        scoring=replace(policy.scoring, factor_weights=replace(FactorWeights(), exposure=0, activity=0)),
+    )
+    controller.repository.history.return_value = History(0, 0, 0, False, False, registered_count=registered)
+    controller.repository.temporal_history.return_value = TemporalHistory(
+        events_for(payload, parse_date(payload["transaction_date"])), []
+    )
+    result = controller.analyze(PixTransactionCreate.model_validate(payload))
+    assert result.status == expected and result.metadata["decision_source"] == source
+    assert result.metadata["risk_score"] == 0
+    assert result.metadata["gnn_v2"]["gnn_score"] == 100
+    assert result.metadata["gnn_v2"]["applied_points"] == 0
+    assert result.metadata["gnn_v2"]["decision_override"] is False
+    assert result.metadata["account_untrust"]["increment"] == (25 if source == "hard_limit" else 0)
+    service.model.predict.assert_called_once()
 
 
 @pytest.mark.parametrize("mode", ["off", "shadow"])

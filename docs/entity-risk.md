@@ -86,8 +86,11 @@ fortes independentes adicionais. O resultado é limitado a 100. Untrust indireto
 de empresas relacionadas entra como sinal mais fraco: metade do maior untrust
 ponderado, sem somar dezenas de suspeitas fracas como se fossem confirmações.
 
-O acréscimo transacional é `ceil(exposição × 20 / 100)`. Ele ocupa o mesmo fator
-`graph` do GNN, com **teto conjunto de 20**, sem criar artificialmente dois fatores
+O modelo de grafo ativo é exclusivamente o v2, que observa sem acrescentar pontos.
+Ele não compartilha nem consome o teto de contribuição dos vínculos verificados.
+
+O acréscimo transacional é `ceil(exposição × 20 / 100)`. Ele ocupa o fator
+`graph`, com **teto de 20**, sem criar artificialmente dois fatores
 independentes para satisfazer a condição de rejeição. Os pontos seguem os limiares
 existentes do score e podem contribuir para uma rejeição quando combinados com outros
 fatores suficientes. O controle relacional direto só propõe 2FA:
@@ -160,10 +163,10 @@ Get-Content -Raw database/migrations/006_entity_history.sql | docker compose exe
 ```
 
 Ela cria somente índices, sem apagar histórico. Não há novas tabelas obrigatórias.
-As evidências são gravadas na metadata imutável da análise. O resumo retorna
-`entity_risk`; `include_details=true` inclui evidências, caminhos, dados de cobertura
-e os indicadores financeiros. Repetir o mesmo ID devolve a avaliação salva, mesmo
-que o cadastro ou modo tenham mudado.
+As evidências, caminhos, cobertura e indicadores financeiros ficam na metadata
+imutável salva no banco. O resumo público não inclui `entity_risk`;
+`include_details=true` acrescenta somente os nomes das regras aplicadas. Repetir o
+mesmo ID usa a avaliação salva, mesmo que o cadastro ou modo tenham mudado.
 
 Os testes novos cobrem a consulta real em PostgreSQL, persistência e replay,
 CPF com dez CNPJs, novo CNPJ, sócio posterior à fraude, papéis distintos, filiais,
@@ -173,4 +176,5 @@ integrada usa banco e containers temporários isolados.
 
 Verificação final: **365 testes passaram**, sem falhas ou casos ignorados;
 lint e formatação passaram nos 62 arquivos Python. Os containers e o banco
-temporários foram removidos ao terminar. Log local: `tmp/entity-risk-verification.log`.
+temporários foram removidos ao terminar. Para verificar o código atual, execute
+a suíte pelos comandos do [README](../README.md).

@@ -9,16 +9,18 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src ./src
-COPY models ./models
+COPY models/false-positive-v1/gnn-false-positive-v1-seed-42.json ./models/false-positive-v1/
 COPY config ./config
 
 FROM base AS gnn-training
 COPY requirements-gnn.txt .
 RUN pip install --no-cache-dir -r requirements-gnn.txt
 COPY scripts ./scripts
-CMD ["python", "-m", "scripts.train_gnn", "--output", "/app/models/gnn-synthetic-v1.json"]
+COPY examples ./examples
+CMD ["python", "-m", "scripts.train_temporal_gnn"]
 
 FROM base AS test
+COPY models ./models
 COPY requirements-dev.txt .
 RUN pip install --no-cache-dir -r requirements-dev.txt
 COPY tests ./tests

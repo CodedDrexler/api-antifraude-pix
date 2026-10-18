@@ -45,8 +45,10 @@ Não publicar esse serviço como API multicliente sem autorização por objeto.
 
 **3. Evidências reais de confiança e fraude.** `approved` significa apenas decisão
 local do motor. Não confirma liquidação, posse do dispositivo ou sucesso de 2FA.
-A referência provisória baseada na primeira tentativa pendente permite iniciar a
-demonstração, mas não é uma autenticação. Produção precisa de eventos confiáveis
+Desde a v9, pendências de 2FA não formam referência de valores. Sem histórico,
+o limite demonstrativo de R$ 500 determina a confirmação adicional por ausência
+de referência; os demais controles continuam ativos em qualquer valor.
+Produção precisa de eventos confiáveis
 de resultado, estados explícitos, deduplicação e reconciliação. O GNN é sintético
 e o acumulado é heurístico; nenhum deles está calibrado para risco real.
 

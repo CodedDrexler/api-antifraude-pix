@@ -12,10 +12,8 @@ import pytest
 from scripts.evaluate_graph_untrust import replay
 from scripts.temporal_graph_examples import source_scenario
 from src.constants import Policy
+from src.gnn.common import parse_date
 from src.gnn.evaluation import select_threshold
-from src.gnn.graph import build_graph, parse_date
-from src.gnn.model import GraphSageModel
-from src.gnn.service import DEFAULT_MODEL, GraphRiskService
 from src.gnn.temporal_graph import (
     RELATIONS,
     TRANSACTION_FEATURES,
@@ -174,15 +172,13 @@ def test_truncated_conflicting_and_unbounded_history_are_refused(payload):
         build_temporal_graph(candidate, [event(candidate, f"id-{i}", 3, 1, 60) for i in range(301)])
 
 
-def test_fast_and_slow_pair_have_same_legacy_prediction_but_distinct_temporal_features():
-    fast, fast_events, fast_graph = generated_graph(kind="temporal_fast")
-    slow, slow_events, slow_graph = generated_graph(kind="temporal_slow")
-    model = GraphSageModel(DEFAULT_MODEL)
-    fast_old = model.predict(build_graph(fast, [e.payload for e in fast_events]))
-    slow_old = model.predict(build_graph(slow, [e.payload for e in slow_events]))
-    assert fast_old == pytest.approx(slow_old, abs=1e-6)
+def test_fast_and_slow_pair_changes_temporal_features_and_v2_prediction():
+    _, _, fast_graph = generated_graph(kind="temporal_fast")
+    _, _, slow_graph = generated_graph(kind="temporal_slow")
+    model = TemporalModel(ROOT / "models/gnn-directed-temporal-v2-seed-42.json")
     assert fast_graph.transaction_features[8] >= 0.5
     assert slow_graph.transaction_features[8] == 0
+    assert model.predict(fast_graph) > model.predict(slow_graph)
 
 
 @pytest.mark.parametrize("split,month", [("train", 1), ("validation", 5), ("test", 9)])
@@ -196,7 +192,7 @@ def test_synthetic_split_dates_and_openings_are_valid(split, month):
 
 
 @pytest.mark.parametrize("seed", [42, 43, 44])
-def test_exported_v2_is_safe_finite_permutation_invariant_and_not_loadable_as_v1(seed):
+def test_exported_v2_is_safe_finite_and_permutation_invariant(seed):
     path = ROOT / "models" / f"gnn-directed-temporal-v2-seed-{seed}.json"
     model = TemporalModel(path)
     candidate, events, graph = generated_graph()
@@ -206,16 +202,21 @@ def test_exported_v2_is_safe_finite_permutation_invariant_and_not_loadable_as_v1
     other_intent = copy.deepcopy(candidate)
     other_intent["fraud_label"] = 1
     assert model.predict(build_temporal_graph(other_intent, events)) == prediction
-    assert GraphRiskService("shadow", path).model is None
 
 
 def test_comparison_selects_on_validation_and_records_parity_for_every_seed():
     report = json.loads((ROOT / "models/gnn-directed-temporal-v2.metrics.json").read_text())
     assert report["design"]["seeds"] == [42, 43, 44]
-    assert len(report["runs"]) == 9
+    # The saved experiment also contains historical v1 runs. The current trainer
+    # exports only the tabular baseline and directed v2, each for three seeds.
+    runs = [run for run in report["runs"] if run["method"] in {"v2_tabular", "v2_directed"}]
+    assert len(runs) == 6
+    assert {(run["method"], run["seed"]) for run in runs} == {
+        (method, seed) for method in ("v2_tabular", "v2_directed") for seed in (42, 43, 44)
+    }
     assert set(RELATIONS) == {"paid_to", "received_from", "uses_device", "used_by", "owns", "owned_by"}
     assert len(TRANSACTION_FEATURES) == 12
-    for run in report["runs"]:
+    for run in runs:
         for budget, comparison in run["comparison"].items():
             assert comparison["validation"]["false_positive_rate"] <= float(budget)
             assert comparison["validation"]["threshold"] == comparison["test"]["threshold"]

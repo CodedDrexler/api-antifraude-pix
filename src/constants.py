@@ -149,7 +149,8 @@ class ContextualTrustPolicy:
 
 @dataclass(frozen=True)
 class Policy:
-    version: str = "pix-score-v8"
+    version: str = "pix-score-v9"
+    no_history_min_amount: int = 50_000
     duplicate_window_seconds: int = 120
     velocity_minutes: int = 10
     velocity_limit: int = 5

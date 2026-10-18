@@ -36,13 +36,13 @@ def request_example(transaction_id, amount):
 
 PIX_REQUEST_EXAMPLES = {
     "two_factor": {
-        "summary": "Pix de R$ 1.500,00 — solicita 2FA",
-        "description": "Com a política padrão e sem histórico, soma 30 pontos pelo primeiro Pix registrado e exige 2FA.",
+        "summary": "Sem histórico: Pix de R$ 1.500,00 — solicita 2FA",
+        "description": "Sem aprovações anteriores e com valor a partir de R$ 500, a política padrão exige 2FA. O valor de R$ 1.500 é ilustrativo.",
         "value": PIX_REQUEST_EXAMPLE,
     },
     "approved": {
-        "summary": "Pix de R$ 10,00 — aprovado",
-        "description": "Com histórico compatível de valor e sem outros fatores, aprova; sem histórico exige 2FA.",
+        "summary": "Primeiro Pix de R$ 10,00 — pode aprovar",
+        "description": "Abaixo de R$ 500, a ausência de histórico não exige 2FA. Aprova se as demais regras e o acumulado não exigirem intervenção.",
         "value": request_example("pix-000124", 1000),
     },
     "blocked": {

@@ -1,6 +1,6 @@
 # Política de risco e evidências
 
-Política `pix-score-v8`. Fontes consultadas em 17/10/2026.
+Política `pix-score-v9`. Fontes consultadas em 17/10/2026.
 Os pontos são parâmetros demonstrativos do projeto, sem calibração em fraude real.
 
 ## Decisão
@@ -15,7 +15,7 @@ Os fatores reduzem sobreposição óbvia, sem demonstrar independência estatís
 |---|---|
 | Limite forte de frequência ou montante | `rejected`, origem `hard_limit` |
 | Score ≥ 80 com ao menos dois fatores positivos | `rejected`, origem `risk_score` |
-| Primeiro Pix ou referência de valor ausente | `two_factor_required`, mesmo com peso zero |
+| Referência de valores aprovada ausente e valor ≥ `no_history_min_amount` (R$ 500) | `two_factor_required`, mesmo com peso zero |
 | Score ≥ 30 | `two_factor_required` |
 | Restante | `approved` |
 
@@ -27,8 +27,8 @@ não executa autenticação nem liquidação.
 
 | Código | Condição | Pontos / fator |
 |---|---|---|
-| `first_transaction` | Nenhuma tentativa anterior do pagador | 30 / exposure |
-| `insufficient_amount_history` | Há tentativas, mas nenhuma referência elegível | 30 / exposure |
+| `first_transaction` | Nenhuma tentativa anterior, sem perfil aprovado e valor ≥ `no_history_min_amount` | 30 / exposure |
+| `insufficient_amount_history` | Há tentativas, mas nenhuma referência aprovada e valor ≥ `no_history_min_amount` | 30 / exposure |
 | `possible_duplicate_payment` | Mesma conta de origem, destinatário e valor em até 120 s, com outro ID | 30 / duplication |
 | `velocity_above_limit` | Cinco tentativas anteriores em 10 min | 80 / activity; forte |
 | `accumulated_amount_above_limit` | Soma das tentativas em 10 min + atual ≥ R$ 30 mil | 80 / activity; forte |
@@ -43,19 +43,21 @@ não executa autenticação nem liquidação.
 
 | Código estável | Nome exibido (`label`) | Teto |
 |---|---|---|
-| exposure | Histórico inicial | 80 |
-| activity | Volume e frequência | 80 |
-| duplication | Possível Pix duplicado | 30 |
-| account | Idade da conta de origem | 15 |
-| counterparty | Destinatário | 25 |
-| profile | Perfil de valores | 80 |
-| device | Vínculos de dispositivos | 40 |
-| access_context | Canal e horário | 15 |
-| graph | Padrão relacional (GNN experimental) | 20 |
+| exposure | Histórico insuficiente para avaliar o Pix | 80 |
+| activity | Quantidade e valor acumulado de Pix recentes | 80 |
+| duplication | Possível repetição do mesmo pagamento | 30 |
+| account | Tempo desde a abertura da conta de origem | 15 |
+| counterparty | Conta de destino recente ou destinatário desconhecido | 25 |
+| profile | Valor do Pix comparado aos pagamentos anteriores | 80 |
+| device | Aparelho desconhecido, compartilhado ou trocado com frequência | 40 |
+| access_context | Uso do aplicativo à noite fora do hábito do pagador | 15 |
+| graph | Risco associado a vínculos societários verificados, se habilitados para contribuir | 20 |
 
 Os códigos existentes foram preservados para integrações; os nomes legíveis
-explicam os fatores ao usuário. `graph` tem vínculo fixo à regra
-`gnn_relational_pattern` e só contribui no modo optativo `contribute`.
+explicam os fatores ao usuário. Na API atual, `graph` recebe somente a contribuição
+optativa de vínculos verificados em `entity_risk`. O único modelo de grafo é o v2,
+que observa em `metadata.gnn_v2` e não adiciona pontos. Evidências antigas mantêm
+seus códigos originais para consulta, sem reativar a implementação anterior.
 
 Na v8, o [Cofre de Confiança Contextual](contextual-trust.md) pode zerar somente
 os pontos da anomalia de perfil quando o valor é habitual na relação e há amostra
@@ -85,9 +87,10 @@ Repetir um ID não acrescenta observações. Eventos atrasados não alteram deci
   inclusive rejeições e pendências. O valor atual entra no montante.
 - **Perfil de valores:** até X aprovações anteriores (X=10), da mais recente para
   a mais antiga, com desempate pelo ID interno. Não há corte por dias.
-- **Referência provisória:** sem aprovações, apenas a primeira tentativa pendente
-  de 2FA, ordenada por data e ID. Outras pendências não elevam essa referência.
-  Não comprova autenticação; serve para iniciar a demonstração sem endpoint de feedback.
+- **Sem referência:** pendências de 2FA e rejeições nunca formam o perfil, mesmo
+  quando não há aprovações. A partir de `no_history_min_amount` (50000 centavos),
+  essa ausência exige 2FA; abaixo do limite, as demais regras decidem normalmente.
+  O parâmetro aceita somente inteiro positivo. O padrão de R$ 500 é demonstrativo.
 - **Familiaridade:** somente aprovações nos últimos 30 dias estabelecem confiança
   em aparelho e destino. Idade da conta é informada pelo integrador.
 - **Diversidade de dispositivos:** todas as tentativas em 24 h, de qualquer
@@ -98,10 +101,12 @@ Repetir um ID não acrescenta observações. Eventos atrasados não alteram deci
 
 A referência de valores compara inteiros: `amount × count >= sum × multiplier`.
 Não há piso de valor ou amostra mínima para esse sinal. Com uma amostra, a
-incerteza é maior; esse fator sozinho exige 2FA. Sem referência, também exige 2FA.
+incerteza é maior; esse fator sozinho exige 2FA. Sem referência, exige 2FA somente
+a partir do limite configurado, inclusive no primeiro Pix e com pesos zerados.
 Nos detalhes: `registered_transactions`, `profile_transactions`, `profile_amount`,
 `profile_average`, `profile_limit` e `profile_basis` (`approved`,
-`initial_pending_attempt` ou `unavailable`). As médias exibidas não decidem o resultado.
+`unavailable`). As médias exibidas não decidem o resultado. Análises históricas
+podem conservar a antiga referência `initial_pending_attempt`; GET/replay não a recalculam.
 
 Usar aprovações evita que uma sequência de rejeições eleve o teto. Aprovação local
 ainda não significa transação legítima ou liquidada; feedback confirmado permitiria
@@ -145,20 +150,28 @@ não cadastrado no banco.
 
 ## Resposta, configuração e auditoria
 
-O resumo inclui `risk_score`, `risk_level`, `decision_source`, `policy_version`,
-`processing_time_ms`, `risk_factors_sum` e `risk_factors` com código (`name`),
-nome legível (`label`), peso percentual, pontos e regras. Limites fortes e GNN
-aparecem quando aplicáveis. `risk_score = min(100, risk_factors_sum)`.
+O resumo público inclui `risk_score` e `bank_notification_required`, além de `key`
+e `status`. `untrust_score` aparece somente quando há avaliação disponível do grafo;
+o campo é omitido nos demais casos. O grafo não altera a decisão em `shadow`.
+No padrão `contribute` do protótipo, pode elevar aprovação para 2FA com score
+≥75,0977 e artefatos vinculados, sem acrescentar pontos ou rejeitar sozinho.
+Veja os [limites da contribuição](gnn-contribution.md).
 
-`include_details=true` recupera a evidência salva: observações e limiares por regra,
-pontos originais e ponderados, contribuição efetiva, tetos, referência de valores,
-contagens de aparelhos/titulares, contexto de acesso e toda a política.
-`group` continua equivalente a `risk_factor`. Somar as contribuições e subtrair
-`score_cap_reduction` reconstrói o score.
+`include_details=true` acrescenta apenas `rules`, uma lista de strings com os
+nomes legíveis das regras aplicadas. Os aliases estão em
+[`rule_aliases.py`](../src/dtos/rule_aliases.py). Regras com contribuição zero
+não aparecem, salvo limites fortes ou controles obrigatórios usados na decisão.
+A lista também explica intervenções por acumulado da conta ou do titular.
+
+A evidência completa continua salva: observações, limiares, pontos originais e
+ponderados, contribuição efetiva, tetos, referências, contexto e política.
+`group` continua equivalente a `risk_factor`. Internamente,
+`risk_score = min(100, risk_factors_sum)`; somar as contribuições e subtrair
+`score_cap_reduction` reconstrói o score. Esses campos não são expostos por HTTP.
 
 O tempo mede o controller até antes da gravação, incluindo travas, consultas,
-regras e GNN; exclui persistência, commit e HTTP. Registros antigos sem medição
-retornam `null`. GET e repetições mantêm o valor original.
+regras e grafo; exclui persistência, commit e HTTP. A duração fica apenas na
+auditoria e não é inventada para registros antigos. GET e repetições usam a decisão salva.
 
 O operador edita `config/risk-policy.json`; o cliente da transação não escolhe
 pesos. Pesos percentuais vão de 0 a 200, pontos por regra de 0 a 100.
@@ -193,4 +206,4 @@ primeiro Pix, canais, fronteiras e fusos do horário, diversidade, histórico fu
 idempotência e concorrência. Os cenários sintéticos não medem eficácia em fraude real.
 Calibração exigiria rótulos de fraude, autenticação e liquidação; avaliação temporal;
 taxas de falso positivo, fraude aprovada, perda e pedidos de 2FA; comparação com
-baselines e monitoramento. [O GNN tem documentação própria](gnn-prototype.md).
+baselines e monitoramento. [O grafo v2 tem documentação própria](graph-v2-api.md).

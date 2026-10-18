@@ -17,7 +17,6 @@ from src.entity_risk import (
     OwnEvidence,
     combine_entity_risk,
 )
-from src.gnn.service import combine_graph_risk
 from src.risk.types import History
 from src.schemas.pix import PixTransactionCreate
 
@@ -237,8 +236,8 @@ def test_oversized_corporate_graph_abstains_from_related_inference_but_preserves
     result = assessment(data)
     assert result["relationships"]["coverage"] == "truncated"
     assert result["relationships"]["exposure_score"] == 0
-    compact = PixAnalysisDTO(key="test", status="approved", metadata={"entity_risk": result}).compact()
-    assert compact.metadata["entity_risk"]["relationship_coverage"] == "truncated"
+    summary = PixAnalysisDTO(key="test", status="approved", metadata={"entity_risk": result}).to_response()
+    assert "entity_risk" not in summary.metadata.model_dump()
     data = data.model_copy(update={"incidents": (incident(0, documents=(PERSON,)),)})
     assert assessment(data)["proposed_action"] == "two_factor_required"
 
@@ -254,26 +253,16 @@ def test_shadow_preserves_scores_decision_and_account_evidence(payload):
     assert metadata == snapshot
 
 
-def test_entity_and_gnn_share_cap_and_cannot_supply_two_graph_rejection_groups(payload):
+def test_verified_entities_remain_one_capped_factor_and_preserve_own_evidence(payload):
     status, metadata = baseline(payload)
-    graph = {
-        "mode": "contribute",
-        "status": "scored",
-        "gnn_score": 95,
-        "proposed_points": 20,
-        "threshold": 80,
-        "experimental": True,
-        "training_data": "synthetic",
-    }
-    status, metadata = combine_graph_risk(status, metadata, graph)
-    _, enriched = combine_entity_risk(status, metadata, assessment(registry()))
+    final, enriched = combine_entity_risk(status, metadata, assessment(registry()))
+    assert final == "two_factor_required"
     assert enriched["risk_score"] == enriched["group_scores"]["graph"]["score"] == 20
     assert enriched["risk_group_count"] == 1
     assert sum(rule["contribution"] for rule in enriched["triggered_rules"]) == 20
     assert sum(factor["score"] for factor in enriched["risk_factors"]) == 20
-    assert enriched["entity_risk"]["applied_points"] == 0
-    gnn_rule = next(rule for rule in enriched["triggered_rules"] if rule["code"] == "gnn_relational_pattern")
-    assert gnn_rule["contribution"] == enriched["gnn"]["applied_points"] == 20
+    assert enriched["entity_risk"]["applied_points"] == 20
+    assert "gnn" not in enriched
 
 
 def test_graph_zero_weight_disables_corporate_escalation_and_prior_rejection_is_preserved(payload):

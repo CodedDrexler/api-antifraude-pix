@@ -22,8 +22,8 @@ def test_all_reasons_and_rejection_priority(api, payload):
 
 def test_sixth_attempt_is_rejected_and_rejections_are_saved(api, payload):
     for index in range(5):
-        assert post(api, new_transaction(payload, amount=payload["amount"] + index + 1))["status"] == (
-            "two_factor_required" if index == 0 else "approved"
+        assert (
+            post(api, new_transaction(payload, amount=payload["amount"] + index + 1))["status"] == "approved"
         )
     rejected = post(api, payload)
     assert rejected["status"] == "rejected"
@@ -78,7 +78,7 @@ def test_accumulated_value_boundary(api, payload):
 def test_new_destination_scores_only_above_minimum(api, payload):
     payload["destination_account"]["opening_date"] = payload["transaction_date"]
     payload["amount"] = 49_999
-    assert post(api, new_transaction(payload))["status"] == "two_factor_required"
+    assert post(api, new_transaction(payload))["status"] == "approved"
     # A different, previously unseen destination.
     payload["destination_account"]["account_number"] = "unseen"
     payload["amount"] = 50_000
@@ -90,12 +90,12 @@ def test_new_destination_scores_only_above_minimum(api, payload):
 
 def test_missing_geolocation_is_valid(api, payload):
     payload["source"].pop("geolocation")
-    assert post(api, payload)["status"] == "two_factor_required"
+    assert post(api, payload)["status"] == "approved"
 
 
 def test_cnpj_is_valid(api, payload):
     payload["source_account"]["owner"]["document_number"] = f"{int(payload['id'][-12:], 16):014d}"[-14:]
-    assert post(api, payload)["status"] == "two_factor_required"
+    assert post(api, payload)["status"] == "approved"
 
 
 @pytest.mark.parametrize(
@@ -135,7 +135,7 @@ def test_invalid_payload_is_rejected_without_consuming_id(api, payload, path, va
     assert status == 400, body
     assert set(body) == {"title", "description", "translation", "code"}
     assert api("GET", "/pix/transaction/" + payload["id"])[0] == 404
-    assert post(api, payload)["status"] == "two_factor_required"
+    assert post(api, payload)["status"] == "approved"
 
 
 def test_required_and_unknown_fields(api, payload):
@@ -180,8 +180,8 @@ def test_concurrent_distinct_pix_cannot_bypass_velocity(api, payload):
     transactions = [new_transaction(payload, amount=payload["amount"] + index) for index in range(6)]
     with ThreadPoolExecutor(max_workers=6) as pool:
         results = list(pool.map(lambda body: post(api, body), transactions))
-    assert sum(result["status"] == "approved" for result in results) == 4
-    assert sum(result["status"] == "two_factor_required" for result in results) == 1
+    assert sum(result["status"] == "approved" for result in results) == 5
+    assert sum(result["status"] == "two_factor_required" for result in results) == 0
     assert sum(result["status"] == "rejected" for result in results) == 1
 
 

@@ -8,7 +8,6 @@ import pytest
 from src.constants import Policy
 from src.controllers.account_untrust import UntrustHistory, assess_untrust
 from src.controllers.decision_engine import DecisionEngine
-from src.gnn.service import combine_graph_risk
 from src.risk.types import History
 from src.schemas.pix import PixTransactionCreate
 
@@ -118,6 +117,7 @@ def test_reclassifying_a_noneligible_rule_does_not_create_suspicion(payload, rul
     if rule == "possible_duplicate_payment":
         history = replace(NORMAL, duplicate_transaction_id="previous", duplicate_elapsed_seconds=1)
     else:
+        payload["amount"] = 50_000
         history = History(0, 0, 0, False, False, registered_count=int(rule != "first_transaction"))
     _, metadata, untrust, _ = assess(payload, history, policy=policy)
     assert metadata["reasons"] == [rule]
@@ -143,28 +143,19 @@ def test_reclassifying_real_profile_evidence_does_not_erase_suspicion(payload):
     assert regrouped[2]["eligible_rules"] == ["amount_above_customer_profile"]
 
 
-@pytest.mark.parametrize("mode", ["off", "shadow", "contribute"])
-def test_graph_risk_and_restriction_do_not_feed_the_next_own_increment(payload, mode):
+@pytest.mark.parametrize("mode", ["off", "shadow"])
+def test_temporal_observation_and_restriction_do_not_feed_own_increment(payload, mode):
     payload["amount"] = 50_000
     history = replace(NORMAL, known_device=False)
     status, baseline = DecisionEngine(Policy()).evaluate(
         PixTransactionCreate.model_validate(payload), history
     )
-    status, enriched = combine_graph_risk(
-        status,
-        baseline,
-        {
-            "mode": mode,
-            "status": "scored",
-            "proposed_points": 20,
-            "gnn_score": 95,
-            "threshold": 80,
-        },
-    )
-    assert enriched["risk_score"] == (40 if mode == "contribute" else 20)
+    # Observational output has no path into the baseline used for own evidence.
+    baseline["gnn_v2"] = {"mode": mode, "gnn_score": 100, "applied_points": 0}
     final, untrust, _ = assess_untrust(status, baseline, UntrustHistory(40, 2), Policy().untrust)
+    assert baseline["risk_score"] == 20
     assert final == "two_factor_required"
-    assert untrust["increment"] == 0  # A weak device signal cannot inherit graph/account points.
+    assert untrust["increment"] == 0
     assert untrust["score"] == 40
 
 

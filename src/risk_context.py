@@ -5,15 +5,15 @@ from datetime import timedelta, timezone
 BRASILIA = timezone(timedelta(hours=-3), "UTC-03:00")
 
 FACTOR_LABELS = {
-    "duplication": "Possível Pix duplicado",
-    "exposure": "Histórico inicial",
-    "activity": "Volume e frequência",
-    "account": "Idade da conta de origem",
-    "counterparty": "Destinatário",
-    "profile": "Perfil de valores",
-    "device": "Vínculos de dispositivos",
-    "access_context": "Canal e horário",
-    "graph": "Padrão relacional (GNN experimental)",
+    "duplication": "Possível repetição do mesmo pagamento",
+    "exposure": "Histórico insuficiente para avaliar o Pix",
+    "activity": "Quantidade e valor acumulado de Pix recentes",
+    "account": "Tempo desde a abertura da conta de origem",
+    "counterparty": "Conta de destino recente ou destinatário desconhecido",
+    "profile": "Valor do Pix comparado aos pagamentos anteriores",
+    "device": "Aparelho desconhecido, compartilhado ou trocado com frequência",
+    "access_context": "Uso do aplicativo à noite fora do hábito do pagador",
+    "graph": "Risco associado a vínculos societários verificados",
 }
 
 

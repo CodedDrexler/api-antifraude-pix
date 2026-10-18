@@ -33,7 +33,7 @@ def main():
         body = copy.deepcopy(body)
         body["id"] = "demo-score-" + uuid4().hex
         request = Request(
-            args.url.rstrip("/") + "/pix/transaction",
+            args.url.rstrip("/") + "/pix/transaction?include_details=true",
             data=json.dumps(body).encode(),
             headers={"Content-Type": "application/json"},
         )
@@ -41,11 +41,11 @@ def main():
             return json.load(response)
 
     def seed(body, count, amount=20_000):
-        for i in reversed(range(count + 1)):
+        for i in reversed(range(count)):
             candidate = copy.deepcopy(body)
             candidate["amount"] = amount
             candidate["transaction_date"] = (at - timedelta(hours=i + 1)).isoformat()
-            if post(candidate)["status"] != ("two_factor_required" if i == count else "approved"):
+            if post(candidate)["status"] != "approved":
                 raise RuntimeError("Unexpected synthetic profile seed decision")
 
     normal_payload = payload()
@@ -75,7 +75,7 @@ def main():
                     "scenario": label,
                     "status": response["status"],
                     "risk_score": response["metadata"]["risk_score"],
-                    "risk_factors": response["metadata"]["risk_factors"],
+                    "rules": response["metadata"]["rules"],
                 }
             )
         )

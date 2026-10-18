@@ -1,6 +1,6 @@
 # Desconfiança acumulada por conta (`account_untrust`)
 
-Implementação atual: `pix-score-v8`. O indicador usa análises locais recentes para
+Implementação atual: `pix-score-v9`. O indicador usa análises locais recentes para
 exigir verificação adicional quando uma conta repete comportamentos de risco.
 Não é uma probabilidade, uma lista de fraudadores nem confirmação de fraude.
 
@@ -72,35 +72,25 @@ As duas medidas são separadas: `risk_score` descreve a transação;
 nem contam como fatores independentes. Uma transação com score 0 pode exigir 2FA
 por histórico acumulado, com `decision_source: account_untrust`.
 
-A resposta contém, por exemplo:
+A resposta pública contém apenas o resumo, por exemplo com `include_details=true`:
 
 ```json
 {
-  "risk_score": 0,
-  "decision_source": "account_untrust",
-  "account_untrust": {
-    "label": "Desconfiança acumulada da conta",
-    "score": 80,
-    "increment": 0,
-    "risk_events": 4,
-    "action": "two_factor_required",
-    "window_hours": 24
-  },
-  "bank_notification": {
-    "required": true,
-    "status": "indicated_only",
-    "reason": "account_untrust_threshold",
-    "threshold": 60,
-    "threshold_crossed": false
+  "key": "b3f1c2e0-7d4a-4c1e-9a52-1f0e6c9d2a77",
+  "status": "two_factor_required",
+  "metadata": {
+    "risk_score": 0,
+    "bank_notification_required": true,
+    "rules": ["Desconfiança acumulada da conta"]
   }
 }
 ```
 
-`required` informa a condição atual; `threshold_crossed` identifica o primeiro
-cruzamento nesta análise. `indicated_only` significa somente indicação na API:
-nenhum aviso externo foi entregue. GET e repetição do ID retornam a mesma fotografia.
-Os detalhes incluem score anterior, regras elegíveis, supressão de incremento e
-parâmetros da política. [Resposta completa real da demonstração](../examples/untrust-response.json).
+`bank_notification_required` informa a necessidade de aviso; nenhum aviso externo
+foi entregue. `untrust_score` pertence ao grafo, separado do acumulado da conta.
+GET e repetição do ID usam a mesma decisão salva. `include_details=true` acrescenta
+somente os nomes das regras aplicadas. Score anterior, regras elegíveis, supressão
+de incremento e política permanecem na auditoria interna.
 
 ## Dados históricos usados para decidir o padrão (v7)
 
@@ -142,7 +132,6 @@ Métricas: [comparação final](../models/untrust-synthetic-v1.metrics.json) e
 
 ```powershell
 docker compose --profile test run --rm --no-deps tests python -m scripts.evaluate_untrust
-docker compose --profile test run --rm --no-deps tests python scripts/demo_untrust.py --url http://api:8000
 ```
 
 Para implantação real: resultados confirmados de 2FA, liquidação e fraude;

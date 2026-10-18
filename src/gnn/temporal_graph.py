@@ -1,6 +1,6 @@
 """V2 schema: typed directed relations, receipt-time evidence and temporal flow.
 
-This schema is deliberately separate from the deployed v1 model. Historical
+This schema is deliberately separate from the retired v1 model. Historical
 non-rejected attempts are proxies, never proof of settlement or confirmed fraud.
 """
 
@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 
-from src.gnn.graph import account_identity, money_feature, parse_date
+from src.gnn.common import account_identity, money_feature, parse_date
 
 FEATURE_VERSION = "pix-directed-temporal-v2"
 RELATIONS = ("paid_to", "received_from", "uses_device", "used_by", "owns", "owned_by")
@@ -62,6 +62,7 @@ class TemporalGraph:
     targets: np.ndarray
     transaction_features: np.ndarray
     history_count: int
+    node_keys: tuple = ()
 
 
 def build_temporal_graph(candidate, events, *, history_truncated=False, received_at=None, own_events=None):
@@ -263,6 +264,7 @@ def build_temporal_graph(candidate, events, *, history_truncated=False, received
         np.array([source, destination, device, holder]),
         transaction_features,
         sum(event.status != "rejected" for event in history),
+        tuple(nodes),
     )
 
 

@@ -1,5 +1,6 @@
 {
-  "version": "pix-score-v8",
+  "version": "pix-score-v9",
+  "no_history_min_amount": 50000,
   "contextual_trust": {
     "enabled": true,
     "history_size": 20,

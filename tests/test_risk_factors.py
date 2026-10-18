@@ -25,7 +25,7 @@ def test_fractional_factor_weight_is_truncated_before_decision_and_explained(pay
     assert metadata["risk_score"] == 29  # 80 * 37% = 29.6; rounding up would incorrectly require 2FA.
     assert next(f for f in metadata["risk_factors"] if f["name"] == "profile") == {
         "name": "profile",
-        "label": "Perfil de valores",
+        "label": "Valor do Pix comparado aos pagamentos anteriores",
         "raw_score": 80,
         "weighted_score": 29,
         "score": 29,

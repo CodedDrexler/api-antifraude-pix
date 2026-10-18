@@ -1,6 +1,6 @@
 """Paired offline training/evaluation, never imported by or installed in the API.
 
-Same source-intent synthetic data for retrained v1, tabular and directed v2.
+Same source-intent synthetic data for tabular features and the directed v2 graph.
 Thresholds use validation only. Test labels never select weights or thresholds.
 """
 
@@ -18,12 +18,8 @@ from torch import nn
 
 from scripts.evaluate_graph_untrust import add_points, replay
 from scripts.temporal_graph_examples import KINDS, source_scenario
-from scripts.train_gnn import GraphSage, metrics, pack
 from src.constants import Policy
-from src.gnn.evaluation import select_threshold
-from src.gnn.graph import build_graph
-from src.gnn.model import GraphSageModel
-from src.gnn.service import DEFAULT_MODEL
+from src.gnn.evaluation import metrics, select_threshold
 from src.gnn.temporal_graph import (
     FEATURE_VERSION,
     NODE_FEATURES,
@@ -43,19 +39,18 @@ def events_for(past):
 
 
 def build_dataset(split, count, policy):
-    rows, old_graphs, new_graphs = [], [], []
+    rows, new_graphs = [], []
     offset = {"train": 300_000, "validation": 400_000, "test": 500_000}[split]
     for kind in KINDS:
         for index in range(count):
             candidate, records, label, _ = source_scenario(offset + index, split, kind)
             _, past, _, status, metadata = replay(candidate, records, policy)
             events = events_for(past)
-            old_graphs.append(build_graph(candidate, [e.payload for e in events]))
             new_graphs.append(build_temporal_graph(candidate, events))
             rows.append(
                 {"id": candidate["id"], "kind": kind, "label": label, "status": status, "metadata": metadata}
             )
-    return rows, old_graphs, new_graphs
+    return rows, new_graphs
 
 
 def temporal_pack(graphs):
@@ -212,7 +207,7 @@ def summarize(validation_rows, test_rows, validation_scores, test_scores):
     return result
 
 
-def export_model(model, path, seed):
+def export_model(model, path, seed, *, model_version=None, training_policy=None):
     weights = {}
     for index, layer in enumerate((model.layer1, model.layer2, model.classifier, model.output), 1):
         weights[f"w{index}"] = layer.weight.detach().numpy().T.tolist()
@@ -221,7 +216,7 @@ def export_model(model, path, seed):
         "architecture": "directed-temporal-sage-2",
         "feature_version": FEATURE_VERSION,
         "training_data": "synthetic",
-        "model_version": f"gnn-directed-temporal-v2-seed-{seed}",
+        "model_version": model_version or f"gnn-directed-temporal-v2-seed-{seed}",
         "label_target": "synthetic_source_mule_intent",
         "relations": list(RELATIONS),
         "node_features": list(NODE_FEATURES),
@@ -229,6 +224,8 @@ def export_model(model, path, seed):
         "seed": seed,
         "weights": weights,
     }
+    if training_policy is not None:
+        data["training_evidence_policy"] = training_policy
     path.write_text(json.dumps(data, separators=(",", ":")) + "\n", encoding="utf-8")
     return TemporalModel(path)
 
@@ -239,7 +236,9 @@ def main():
     parser.add_argument("--per-kind-train", type=int, default=40)
     parser.add_argument("--per-kind-validation", type=int, default=20)
     parser.add_argument("--per-kind-test", type=int, default=40)
-    parser.add_argument("--output", type=Path, default=Path("models/gnn-directed-temporal-v2.metrics.json"))
+    parser.add_argument(
+        "--output", type=Path, default=Path("models/gnn-directed-temporal-v2-retrain.metrics.json")
+    )
     parser.add_argument("--rows-output", type=Path, default=Path("tmp/gnn-directed-temporal-v2.rows.json"))
     args = parser.parse_args()
     if min(args.epochs, args.per_kind_train, args.per_kind_validation, args.per_kind_test) < 1:
@@ -248,15 +247,13 @@ def main():
     torch.use_deterministic_algorithms(True)
     policy = Policy.from_file("config/risk-policy.json")
     datasets = {}
-    batches = {"v1_retrained": {}, "v2_tabular": {}, "v2_directed": {}}
+    batches = {"v2_tabular": {}, "v2_directed": {}}
     labels = {}
-    frozen = GraphSageModel(DEFAULT_MODEL)
     for split in ("train", "validation", "test"):
         count = getattr(args, "per_kind_" + split)
-        rows, old_graphs, new_graphs = build_dataset(split, count, policy)
-        datasets[split] = rows, old_graphs, new_graphs
+        rows, new_graphs = build_dataset(split, count, policy)
+        datasets[split] = rows, new_graphs
         labels[split] = torch.tensor([row["label"] for row in rows], dtype=torch.float32)
-        batches["v1_retrained"][split] = pack(old_graphs)
         batches["v2_directed"][split] = temporal_pack(new_graphs)
         batches["v2_tabular"][split] = (
             torch.tensor(
@@ -267,10 +264,7 @@ def main():
         )
         print(json.dumps({"prepared": split, "samples": len(rows)}), flush=True)
     validation_rows, test_rows = datasets["validation"][0], datasets["test"][0]
-    frozen_scores = {
-        split: np.array([frozen.predict(g) for g in datasets[split][1]]) for split in ("validation", "test")
-    }
-    predictions = {split: {"frozen_v1": values.tolist()} for split, values in frozen_scores.items()}
+    predictions = {split: {} for split in ("validation", "test")}
     report = {
         "scope": "SYNTHETIC OFFLINE EXPERIMENT ONLY; no API/policy/model replacement or fraud efficacy claim",
         "label_target": "Synthetic SOURCE mule intent; never mixed with legacy transaction-intent labels",
@@ -283,21 +277,11 @@ def main():
             "kinds": list(KINDS),
             "threshold_budgets": [0, 0.01, 0.05],
             "selection": "Best epoch by validation BCE; threshold by validation FPR; three predeclared seeds, no winner chosen on test",
-            "neighborhood": "Both models receive the same full supplied synthetic history, max 300 events; broader than current API's one-neighborhood query",
+            "neighborhood": "Full supplied synthetic history, max 300 events; distinct from the live bounded neighborhood",
             "evidence": "Rule-only independent untrust; simulated chronological receipt time; non-rejected attempts are not settled payments",
-            "comparison": "Frozen v1 has old transaction-intent training; retrained v1, v2 tabular and v2 graph share source-intent training data",
+            "comparison": "Tabular attributes and directed v2 graph share source-intent training data",
             "limits": "Same artificial generator across splits, no confirmed outcomes, no delayed/out-of-order receipt simulation, no production calibration",
             "development": "Exploratory experiment; all budgets and seeds are reported, no untouched confirmatory holdout claim",
-        },
-        "frozen_v1": summarize(
-            validation_rows,
-            test_rows,
-            frozen_scores["validation"],
-            frozen_scores["test"],
-        ),
-        "frozen_v1_at_original_runtime_0_8": {
-            "test": metrics(np.array([r["label"] for r in test_rows]), frozen_scores["test"], 0.8),
-            "policy_with_20_point_cap": decisions(test_rows, frozen_scores["test"], 0.8),
         },
         "baseline": decisions(test_rows, np.zeros(len(test_rows)), 1),
         "runs": [],
@@ -305,7 +289,6 @@ def main():
     args.output.parent.mkdir(parents=True, exist_ok=True)
     for seed in (42, 43, 44):
         for name, constructor in (
-            ("v1_retrained", GraphSage),
             ("v2_tabular", Tabular),
             ("v2_directed", DirectedSage),
         ):
@@ -333,7 +316,7 @@ def main():
             if name == "v2_directed":
                 path = args.output.parent / f"gnn-directed-temporal-v2-seed-{seed}.json"
                 exported = export_model(model, path, seed)
-                numpy_scores = np.array([exported.predict(g) for g in datasets["test"][2]])
+                numpy_scores = np.array([exported.predict(g) for g in datasets["test"][1]])
                 error = float(np.max(np.abs(numpy_scores - test_scores)))
                 if error > 1e-5:
                     raise RuntimeError(f"Export parity failed: {error}")
@@ -350,7 +333,6 @@ def main():
             Path("src/gnn/evaluation.py"),
             Path("scripts/evaluate_graph_untrust.py"),
             Path("config/risk-policy.json"),
-            Path("models/gnn-synthetic-v1.json"),
         )
     }
     args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

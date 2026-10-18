@@ -55,5 +55,11 @@ class RuleContext:
         return value if value is not None else self.history.profile_count
 
     @property
+    def needs_history_confirmation(self) -> bool:
+        return (
+            self.history.profile_count == 0 and self.transaction.amount >= self.policy.no_history_min_amount
+        )
+
+    @property
     def night(self) -> bool:
         return is_night(self.transaction.transaction_date, self.policy)

@@ -1,13 +1,14 @@
 # Perfil por relação e atribuição do risco
 
-A política `pix-score-v8` mantém o motor, as rotas e o histórico existentes.
-Acrescenta uma contextualização da anomalia de valor e distingue risco da operação
+A política `pix-score-v8` introduziu a contextualização mantida na v9, preservando
+as rotas e o histórico existentes. Ela contextualiza a anomalia de valor e distingue risco da operação
 de evidência própria do pagador. Os parâmetros são hipóteses do projeto.
 
 ## Cofre de Confiança Contextual
 
-A referência geral continua sendo a média das últimas dez aprovações, com a
-referência provisória já documentada quando não há aprovações. O Cofre usa uma
+A referência geral usa a média das últimas dez aprovações. Desde a v9, pendências
+de 2FA não fornecem referência provisória; sem aprovações, o perfil fica indisponível.
+O Cofre usa uma
 amostra separada: somente aprovações locais sem limites críticos registrados,
 com evento nos últimos `profile_days` (30) e recebidas antes da decisão.
 Pendências de 2FA, rejeições e eventos futuros não compõem essa amostra.

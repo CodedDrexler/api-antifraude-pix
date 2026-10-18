@@ -2,6 +2,10 @@
 
 Análise de 17/10/2026. Política `pix-score-v6`. **Dados exclusivamente sintéticos.**
 
+Os resultados abaixo são históricos. Na v9, o gerador passou a iniciar o perfil
+com uma aprovação abaixo de R$ 500, sem aproveitar tentativas pendentes de 2FA.
+Reexecutar o script usa a política atual e produz uma avaliação nova.
+
 A proposta encontra sinais que o score individual não encontra nos cenários
 construídos, mas contar conexões suspeitas também penaliza remetentes legítimos.
 A combinação de vizinhança com repasses repetidos teve o melhor resultado com
@@ -162,7 +166,8 @@ na validação e hashes dos fontes. Resultados por candidato ficam em
 Com a imagem local de testes já disponível, executar na raiz em PowerShell:
 
 ```powershell
-docker run --rm --network none --mount "type=bind,source=${PWD},target=/app" --workdir /app -e PYTHONDONTWRITEBYTECODE=1 bootcamp-tests:latest python -m scripts.evaluate_graph_untrust
+docker compose --profile test build tests
+docker compose --profile test run --rm --no-deps tests python -m scripts.evaluate_graph_untrust
 ```
 
 Foram aprovados **119 testes** dos arquivos de experimento, GNN, política de

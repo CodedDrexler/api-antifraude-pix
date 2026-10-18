@@ -27,7 +27,7 @@ ROLE_STRENGTH = {
     "minority_partner": 0.2,
     "accountant": 0.0,
 }
-MAX_GRAPH_POINTS = 20  # Shared with the existing GNN, not an extra independent factor.
+MAX_GRAPH_POINTS = 20  # Verified entity relationships remain one capped factor.
 
 
 class RegistryModel(BaseModel):
@@ -378,7 +378,7 @@ class EntityRiskService:
 
 
 def combine_entity_risk(status, metadata, assessment):
-    """One shared graph factor cap; independent evidence is preserved upstream."""
+    """Bound verified relationships to one factor; preserve independent evidence upstream."""
     original_status = status
     metadata = copy.deepcopy(metadata)
     assessment = copy.deepcopy(assessment)
@@ -398,8 +398,6 @@ def combine_entity_risk(status, metadata, assessment):
     scoring = metadata["policy"]["scoring"]
     factor_weight = scoring["factor_weights"]["graph"]
     if proposed:
-        # Preserve the GNN's existing allocation on equal-weight ties, so its
-        # saved applied_points keeps matching the final graph evidence.
         match = RuleMatch(
             "verified_entity_relationship_exposure", assessment["relationships"]["exposure_score"], 0
         )

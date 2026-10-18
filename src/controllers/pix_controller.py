@@ -12,7 +12,6 @@ from src.controllers.decision_engine import DecisionEngine
 from src.dtos.pix_dto import PixAnalysisDTO
 from src.entity_risk import EntityRiskService, combine_entity_risk
 from src.errors.pix_errors import AnalysisNotFound, TransactionConflict
-from src.gnn.service import HISTORY_DAYS, MAX_HISTORY, GraphRiskService, combine_graph_risk
 from src.gnn.temporal_service import TemporalGraphService, TemporalHistory
 from src.repositories.pix_repository import PixRepository
 from src.risk.attribution import decision_causes
@@ -28,14 +27,12 @@ class PixController:
         self,
         session: Session,
         policy: Policy,
-        graph_service: GraphRiskService | None = None,
         entity_service: EntityRiskService | None = None,
         temporal_service: TemporalGraphService | None = None,
     ):
         self.session = session
         self.repository = PixRepository(session)
         self.engine = DecisionEngine(policy)
-        self.graph_service = graph_service or GraphRiskService(mode="off")
         self.entity_service = entity_service or EntityRiskService(mode="off")
         self.temporal_service = temporal_service or TemporalGraphService(mode="off")
 
@@ -65,13 +62,7 @@ class PixController:
             transaction, destination_identity, self.engine.policy, account_identity, received_at=received_at
         )
         status, baseline = self.engine.evaluate(transaction, history)
-        graph_history, truncated = [], False
-        if self.graph_service.enabled:
-            graph_history, truncated = self.repository.graph_history(
-                transaction, destination_identity, MAX_HISTORY, HISTORY_DAYS
-            )
-        graph_result = self.graph_service.assess(payload, graph_history, truncated)
-        status, metadata = combine_graph_risk(status, baseline, graph_result)
+        metadata = baseline
         untrust_policy = self.engine.policy.untrust
         untrust_history = (
             self.repository.untrust_history(
@@ -120,15 +111,17 @@ class PixController:
             if self.temporal_service.enabled
             else TemporalHistory()
         )
-        # Observation only. Run after all decisions; its output cannot feed own
-        # increments, change status, consume graph points or relax another control.
+        # Graph contribution runs last: at most approved -> 2FA, without points
+        # or feedback into the independent account/entity evidence computed above.
         temporal_result = self.temporal_service.assess(payload, received_at, temporal_history)
         metadata["gnn_v2"] = temporal_result
+        status = self.temporal_service.combine(status, metadata, self.engine.policy)
         metadata["policy"]["gnn_v2"] = {
             key: value
             for key, value in temporal_result.items()
             if key
             in {
+                "label",
                 "mode",
                 "model_version",
                 "model_sha256",
@@ -143,6 +136,7 @@ class PixController:
                 "training_evidence_policy",
                 "minimum_history",
                 "label_target",
+                "contribution_policy",
             }
         }
         metadata["decision_causes"] = decision_causes(metadata, status)

@@ -60,10 +60,6 @@ def replay(candidate, records, policy, *, include_details=False):
         ]
         profile = approved[-policy.profile_history_size :]
         profile_basis = "approved" if profile else "unavailable"
-        if not profile:
-            profile = [row for row in payer if row[1] == "two_factor_required"][:1]
-            if profile:
-                profile_basis = "initial_pending_attempt"
         day = [
             row for row in past if row[0].transaction_date >= at - timedelta(hours=policy.device_window_hours)
         ]

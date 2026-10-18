@@ -1,0 +1,9 @@
+{
+  "version": "gnn-2fa-v1",
+  "method": "score_only_2fa/confidence_budget",
+  "maximum_action": "two_factor_required",
+  "model_sha256": "410478ca51f26db3587096f8136a470a1275db3cc1a2740e394761481cfeeaad",
+  "baseline_policy_sha256": "4b496c576d7c0f487aac08570ec041e42449160ecd3290c5735dd2f68c40a6e8",
+  "threshold": 0.750977,
+  "validation_report_sha256": "ad4664c3298c3cfc471c05ed7a8256fd315a35865b2e8ebe1fd7dee6e7472802"
+}

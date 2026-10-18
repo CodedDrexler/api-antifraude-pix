@@ -20,8 +20,7 @@ from time import perf_counter
 from src.constants import Policy
 from src.controllers.account_untrust import UntrustHistory, assess_untrust
 from src.controllers.decision_engine import DecisionEngine
-from src.gnn.graph import account_identity
-from src.gnn.service import GraphRiskService, combine_graph_risk
+from src.gnn.common import account_identity
 from src.gnn.synthetic import scenario
 from src.risk.scoring import score_decision
 from src.risk.types import History
@@ -29,7 +28,7 @@ from src.risk_context import is_night
 from src.schemas.pix import PixTransactionCreate
 
 STATUS_ORDER = {"approved": 0, "two_factor_required": 1, "rejected": 2}
-METHODS = ("baseline", "count_neighbors", "weighted_neighbors", "weighted_with_repass", "existing_gnn")
+METHODS = ("baseline", "count_neighbors", "weighted_neighbors", "weighted_with_repass")
 STRESS_KINDS = (
     "mule_direct",
     "mule_two_hops",
@@ -82,10 +81,6 @@ def history_for(tx, past, policy):
     familiar = [r for r in approved if r.tx.transaction_date >= at - timedelta(days=policy.profile_days)]
     profile = approved[-policy.profile_history_size :]
     basis = "approved" if profile else "unavailable"
-    if not profile:
-        profile = [r for r in payer if r.status == "two_factor_required"][:1]
-        if profile:
-            basis = "initial_pending_attempt"
     day = [r for r in past if r.tx.transaction_date >= at - timedelta(hours=policy.device_window_hours)]
     duplicate = [
         r
@@ -282,34 +277,15 @@ def add_points(status, metadata, points):
     return max((status, proposed), key=STATUS_ORDER.get), updated["risk_score"]
 
 
-def evaluate_one(candidate, records, policy, graph_policy, service, *, include_rejected=False):
-    tx, past, rule_status, status, metadata = replay(candidate, records, policy)
+def evaluate_one(candidate, records, policy, graph_policy, *, include_rejected=False):
+    tx, past, _, status, metadata = replay(candidate, records, policy)
     started = perf_counter()
     signal = graph_signal(tx, past, policy, graph_policy, include_rejected=include_rejected)
     signal["graph_ms"] = (perf_counter() - started) * 1000
     outcomes = {"baseline": {"status": status, "score": metadata["risk_score"], "points": 0}}
-    for method in METHODS[1:-1]:
+    for method in METHODS[1:]:
         changed, score = add_points(status, metadata, signal[method])
         outcomes[method] = {"status": changed, "score": score, "points": score - metadata["risk_score"]}
-    # Reproduce the existing repository's one-neighborhood selection, not the new BFS.
-    related = [
-        r.tx.model_dump(mode="json")
-        for r in past
-        if r.tx.transaction_date >= tx.transaction_date - timedelta(days=30)
-        and (
-            r.tx.source_account.owner.document_number == tx.source_account.owner.document_number
-            or key(r.tx.destination_account) == key(tx.destination_account)
-            or r.tx.source.device_id == tx.source.device_id
-        )
-    ]
-    assessment = service.assess(candidate, related[-300:], len(related) > 300)
-    gnn_status, enriched = combine_graph_risk(rule_status, metadata, assessment)
-    outcomes["existing_gnn"] = {
-        "status": max((status, gnn_status), key=STATUS_ORDER.get),
-        "score": enriched["risk_score"],
-        "points": enriched["gnn"]["applied_points"],
-    }
-    signal["gnn_status"] = assessment["status"]
     return outcomes, signal
 
 
@@ -363,7 +339,10 @@ def stress_scenario(seed, split, kind):
             add(index, 90, 300 - j * 35, rng.randint(65_000, 85_000))
     # Establish a quiet payer profile; candidate has no own unusual behavior.
     for minute in (500, 440, 380, 320):
-        add(1, 2, minute, rng.randint(55_000, 65_000))
+        amount = rng.randint(55_000, 65_000)
+        # The first approval must be below the v9 cold-start floor. Later
+        # amounts can establish their own profile without trusting pending 2FA.
+        add(1, 2, minute, min(amount, 49_999) if minute == 500 else amount)
     risk_target = 10
     if kind in {
         "mule_direct",
@@ -505,9 +484,6 @@ def main():
     args = parser.parse_args()
     policy = Policy.from_file("config/risk-policy.json")
     graph_policy = GraphPolicy()
-    service = GraphRiskService("contribute")
-    if not service.enabled:
-        raise RuntimeError("The existing GNN must load for the comparison")
     report = {
         "scope": "SYNTHETIC ONLY; no real confirmed fraud, no deployment or production writes",
         "policy": asdict(policy),
@@ -535,7 +511,6 @@ def main():
                 Path("src/gnn/synthetic.py"),
                 Path("src/controllers/decision_engine.py"),
                 Path("src/controllers/account_untrust.py"),
-                Path("models/gnn-synthetic-v1.json"),
             )
         },
     }
@@ -556,7 +531,7 @@ def main():
                     for i in range(50 if split == "validation" else 100)
                 )
             for candidate, records, label, kind in examples:
-                outcomes, signal = evaluate_one(candidate, records, policy, graph_policy, service)
+                outcomes, signal = evaluate_one(candidate, records, policy, graph_policy)
                 rows.append(
                     {
                         "id": candidate["id"],

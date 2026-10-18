@@ -60,13 +60,13 @@ def test_history_status_eligibility_is_explicit(database_engine, payload, status
         assert history.approved_count == int(status == "approved")
         assert history.known_destination is (status == "approved")
         assert history.known_device is (status == "approved")
-        assert history.profile_count == int(status != "rejected")
-        assert history.profile_amount == (20_000 if status != "rejected" else 0)
+        assert history.profile_count == int(status == "approved")
+        assert history.profile_amount == (20_000 if status == "approved" else 0)
         assert (
             history.profile_basis
             == {
                 "approved": "approved",
-                "two_factor_required": "initial_pending_attempt",
+                "two_factor_required": "unavailable",
                 "rejected": "unavailable",
             }[status]
         )
@@ -112,6 +112,8 @@ def test_database_refuses_history_mutation(database_engine, payload, operation):
 def test_committed_payload_and_evidence_survive_new_connection(database_engine, api, payload, expected):
     if expected == "approved":
         seed_profile(api, payload, 1)
+    elif expected == "two_factor_required":
+        payload["amount"] = 50_000
     elif expected == "rejected":
         payload["amount"] = 3_000_000
     decision = post(api, payload)
@@ -133,6 +135,7 @@ def test_committed_payload_and_evidence_survive_new_connection(database_engine, 
 
 
 def test_receiving_pix_does_not_establish_outgoing_payer_profile(api, payload):
+    payload["amount"] = 50_000
     at = datetime.fromisoformat(payload["transaction_date"])
     inbound = new_transaction(payload, transaction_date=(at - timedelta(hours=1)).isoformat())
     inbound["source_account"]["owner"]["document_number"] = f"{uuid4().int % 10**11:011d}"

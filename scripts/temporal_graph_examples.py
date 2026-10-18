@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta
 
 from scripts.evaluate_graph_untrust import STRESS_KINDS, stress_scenario
-from src.gnn.graph import account_identity
+from src.gnn.common import account_identity
 
 KINDS = (*STRESS_KINDS, "temporal_fast", "temporal_slow")
 

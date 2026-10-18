@@ -9,17 +9,9 @@ Este projeto aproveita seu desenho de camadas, FastAPI, SQLAlchemy, PostgreSQL,
 commit no controller e erros estruturados para o problema Pix.
 As funcionalidades bancárias daquela entrega não fazem parte deste serviço.
 
-Materiais lidos:
-
-- `Desafio Antifraude Pix.pdf`, especialmente contrato, escopo e modelo do README.
-- `Hackathon Antifraude Pix.pdf`: decisão síncrona, histórico, fricção e justificativa das regras.
-- `Bootcamp_QI_Tech_2026_-_Dia_1_Tarde.pdf`: responsabilidades das camadas do Base Service.
-- `Bootcamp QI Tech Aula 2.pdf`: contratos, modelagem, isolamento, fluxos e RFC.
-- `Bootcamp 4 aula Tarde.pptx`: recapitulação, testes por HTTP, Docker, idempotência e operação.
-
-O desafio do hackathon define o escopo atual. Os materiais anteriores descrevem
-uma entrega bancária distinta; cadastro, saldo, porquinhos e interface não entram aqui.
-Também não existe integração externa no caminho da decisão.
+O desafio do hackathon define o escopo atual: decisão síncrona de Pix com
+histórico e justificativas. Cadastro, saldo, porquinhos e interface bancária
+não fazem parte deste serviço. Não existe integração externa no caminho da decisão.
 
 ## Camadas
 
@@ -47,27 +39,35 @@ Cada função recebe um `RuleContext` e produz `RuleMatch` com código, observa�
 limiar e indicação de limite forte. O registro explícito em `src/risk/registry.py`
 preserva a ordem dos motivos. As regras não consultam o banco nem calculam pontos.
 O `DecisionEngine` reúne regras, histórico e evidências da resposta. As funções
-de `src/risk/scoring.py` calculam pesos, tetos e faixas de decisão tanto para
-as regras quanto para a contribuição opcional do GNN. O tipo `History` fica
+de `src/risk/scoring.py` calculam pesos, tetos e faixas de decisão das regras e
+da camada relacional societária opcional. O tipo `History` fica
 em `src/risk/types.py`, sem depender do repository ou de SQLAlchemy.
-O GNN continua em `src/gnn/`, com contribuição aplicada depois do score das regras.
+O Modelo Relacional Temporal v2 — experimental fica em `src/gnn/` e roda depois
+das outras camadas. No protótipo, pode elevar aprovação para 2FA, sem contribuir pontos.
 O controller obtém o histórico pelo repository e escolhe quando confirmar a escrita.
-O resource devolve exclusivamente `key`, `status` e `metadata`.
+O resource projeta a evidência interna em `PixResponseDTO`: `key`, `status` e
+`metadata` com `risk_score` e `bank_notification_required`, além de `untrust_score`
+somente quando há avaliação disponível do grafo. `include_details=true` acrescenta somente `rules`
+com nomes legíveis. O DTO interno e a política completa não são serializados por HTTP.
 
 Os diretórios Python usam namespace packages do Python 3.12, sem `__init__.py`.
 O código importa módulos explicitamente; o registro de regras fica em
 `src/risk/registry.py`, sem inicialização implícita de pacotes.
 
-A política atual `pix-score-v8` usa contribuições por regra, tetos por grupo,
+A política atual `pix-score-v9` usa contribuições por regra, tetos por grupo,
 faixas de score e limites fortes explícitos. A [pesquisa e o cálculo completo](risk-scoring.md)
 detalham o racional. O score usa o mesmo retrato de histórico obtido dentro da
 transação protegida pelas travas existentes. Análises antigas mantêm seu conteúdo;
 novos IDs recebem o score salvo em `decision_metadata`, sem mudança de schema SQL.
 
-Um GraphSAGE experimental adiciona a avaliação
-`metadata.gnn`. O padrão shadow preserva a decisão por regras; contribute é uma
-opção explícita para testar até 20 pontos adicionais. Treino, inferência, limites
-de histórico e resultados sintéticos estão em [gnn-prototype.md](gnn-prototype.md).
+O único modelo de grafo ativo é o Modelo Relacional Temporal v2 — experimental,
+uma GNN simplificada inspirada em GraphSAGE, com avaliação salva em `decision_metadata.gnn_v2`
+e nome público em `label`. O padrão `contribute` permite somente aprovação para
+2FA, com corte vinculado ao modelo e à política avaliados. Também aceita `shadow`
+e `off`; nunca adiciona pontos ou suspeita própria. O carregamento, inferência,
+consulta e configuração do modelo anterior foram retirados. GET/replay continuam
+lendo decisões antigas, sem recalcular. Treino, inferência e limites estão em
+[graph-v2-api.md](graph-v2-api.md).
 O payload e a decisão continuam atômicos; os índices de dispositivo e destino
 possuem migração SQL aditiva para bases existentes.
 
@@ -157,9 +157,10 @@ seriam necessários antes de calibrar o motor.
 
 Todos os pedidos válidos inéditos contam para velocity e montante, inclusive
 reprovados ou com 2FA: representam tentativas. Aprovações formam o perfil de
-valores e a familiaridade. Sem aprovações, a primeira tentativa pendente oferece
-uma referência provisória de valor; outras pendências não a elevam. O perfil
-registra essa origem explicitamente. Sem feedback de
+valores e a familiaridade. Pendências de 2FA nunca viram referência de valor.
+Sem aprovações anteriores, valores a partir de `no_history_min_amount` (R$ 500)
+exigem 2FA; valores menores passam pela avaliação das demais regras.
+O perfil registra `approved` ou `unavailable` como origem. Sem feedback de
 fraude confirmada, esse perfil também pode ser contaminado. Mudanças de conta,
 dispositivo e horário precisam ser calibradas com dados rotulados.
 

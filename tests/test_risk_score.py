@@ -18,14 +18,14 @@ def score(api, payload):
     decision = post(api, payload)
     m = decision["metadata"]
     assert type(m["risk_score"]) is int and 0 <= m["risk_score"] <= 100
-    assert m["policy"]["version"] == "pix-score-v8"
+    assert m["policy"]["version"] == "pix-score-v9"
     assert {
         key: value for key, value in m["policy"].items() if key not in {"gnn", "gnn_v2", "entity_risk"}
     } == CONFIGURED_POLICY
-    assert m["policy"]["gnn"]["mode"] == "shadow"
-    assert m["gnn"]["applied_points"] == 0
-    assert m["policy"]["gnn_v2"]["mode"] == "shadow"
+    assert "gnn" not in m and "gnn" not in m["policy"]
+    assert m["policy"]["gnn_v2"]["mode"] == "contribute"
     assert m["gnn_v2"]["applied_points"] == 0
+    assert m["gnn_v2"]["label"] == m["policy"]["gnn_v2"]["label"]
     assert m["policy"]["entity_risk"]["mode"] == "shadow"
     assert m["entity_risk"]["applied_points"] == 0
     assert m["score_semantics"] == "heuristic_not_probability"
@@ -43,7 +43,7 @@ def score(api, payload):
 
 
 def test_first_pix_requests_two_factor_and_saves_explanation(api, payload):
-    payload["amount"] = 1  # Smallest valid cent amount still requires the initial challenge.
+    payload["amount"] = 50_000  # Missing history requires confirmation starting at the configured floor.
     decision = score(api, payload)
     assert decision["metadata"]["risk_score"] == 30
     assert decision["status"] == "two_factor_required"

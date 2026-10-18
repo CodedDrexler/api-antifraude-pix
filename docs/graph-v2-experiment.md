@@ -1,4 +1,19 @@
-# Experimento do grafo direcionado com tempo
+# Experimento do Modelo Relacional Temporal v2
+
+O nome público atual é **Modelo Relacional Temporal v2 — experimental**.
+A arquitetura é uma GNN simplificada com agregação por relação inspirada em
+GraphSAGE; a validação se limita a dados sintéticos.
+
+Este documento e suas métricas preservam o experimento histórico com nove
+execuções. Na API 2.6.0 o v2 é o único modelo de grafo. O treinador atual compara
+somente v2 e atributos tabulares, em seis execuções, e grava por padrão um relatório
+`gnn-directed-temporal-v2-retrain.metrics.json`, sem reescrever o benchmark abaixo.
+A implementação anterior permanece recuperável pelo histórico Git.
+
+Desde a política v9, o gerador inicia o perfil sintético com uma aprovação abaixo
+de R$ 500. Pendências não formam referência de valores. Os relatórios históricos
+abaixo preservam a política e os hashes de suas execuções originais; uma nova
+execução do treinador avalia a política atual, sem retreinar a API automaticamente.
 
 Atualização de 18/10/2026: o v2 agora está
 [integrado à API em observação](graph-v2-api.md). As métricas abaixo registram
@@ -122,8 +137,8 @@ temporais, deduplicação, pareamento de repasses, expiração, recebimento futu
 histórico incompleto, isolamento de rótulos, identidade entre grupos, exportação
 e seleção de limiares com notas constantes ou empatadas. A suíte completa
 terminou com **427 testes aprovados**, sem casos ignorados. Lint e formatação
-passaram nos 70 arquivos Python. O JUnit local está em
-`tmp/graph-v2-tests.xml`, ignorado pelo Git.
+passaram nos 70 arquivos Python. Para verificar o código atual, execute a suíte
+pelos comandos do [README](../README.md).
 
 - [Métricas completas](../models/gnn-directed-temporal-v2.metrics.json).
 - Modelos separados: `models/gnn-directed-temporal-v2-seed-42.json`,
@@ -145,7 +160,8 @@ docker compose --profile gnn run --rm gnn-training python -m scripts.train_tempo
 A configuração existente monta `models/`, preservando as métricas e os pesos
 v2. Para preservar também os resultados individuais de `tmp/`, acrescente
 `-v "${PWD}/tmp:/app/tmp"` ao comando `run`, antes de `gnn-training`.
-O modelo atual `gnn-synthetic-v1.json` não é sobrescrito.
+O treinamento exporta os modelos v2 para `models/`; reconstrua a API para carregar
+os pesos atualizados.
 
 ## Decisão após o experimento
 

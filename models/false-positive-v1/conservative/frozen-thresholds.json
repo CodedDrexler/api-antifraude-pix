@@ -1,0 +1,36 @@
+{
+  "models": {
+    "original-42": "6c6c9eedcbd63bde1ced13f79c2d543233472f14e1a336a1ca5adf5fbc099a2e",
+    "original-43": "14604c87e1a07ae4c8e88ec0683eca6db09b21e70903918e83d601a8c03df3a8",
+    "original-44": "63061ced6afcdd388b276acb7098c700f277994ca68eaf95b9861cf8ebb173e7",
+    "candidate-42": "410478ca51f26db3587096f8136a470a1275db3cc1a2740e394761481cfeeaad",
+    "candidate-43": "9426c168031fb792f7384846e122b54c0a8d16649ab004f488898d5ad4be2be0",
+    "candidate-44": "ad40b5e08309f19fe803ff0d982d49c60341ac277b522e2b4fc67cae1785de81"
+  },
+  "thresholds": {
+    "original-42/score_only_2fa/point_budget": 0.999648,
+    "original-42/score_only_2fa/confidence_budget": 0.999648,
+    "original-42/corroborated_2fa/point_budget": 0.9995860000000002,
+    "original-42/corroborated_2fa/confidence_budget": 1.0000000000000002,
+    "original-43/score_only_2fa/point_budget": 0.999517,
+    "original-43/score_only_2fa/confidence_budget": 0.999517,
+    "original-43/corroborated_2fa/point_budget": 0.9995090000000002,
+    "original-43/corroborated_2fa/confidence_budget": 1.0000000000000002,
+    "original-44/score_only_2fa/point_budget": 0.999572,
+    "original-44/score_only_2fa/confidence_budget": 0.999572,
+    "original-44/corroborated_2fa/point_budget": 0.9995590000000001,
+    "original-44/corroborated_2fa/confidence_budget": 1.0000000000000002,
+    "candidate-42/score_only_2fa/point_budget": 0.600928,
+    "candidate-42/score_only_2fa/confidence_budget": 0.750977,
+    "candidate-42/corroborated_2fa/point_budget": 0.801758,
+    "candidate-42/corroborated_2fa/confidence_budget": 0.801758,
+    "candidate-43/score_only_2fa/point_budget": 0.617858,
+    "candidate-43/score_only_2fa/confidence_budget": 0.744425,
+    "candidate-43/corroborated_2fa/point_budget": 0.617858,
+    "candidate-43/corroborated_2fa/confidence_budget": 0.785801,
+    "candidate-44/score_only_2fa/point_budget": 0.640476,
+    "candidate-44/score_only_2fa/confidence_budget": 0.6980729999999999,
+    "candidate-44/corroborated_2fa/point_budget": 0.620169,
+    "candidate-44/corroborated_2fa/confidence_budget": 0.793733
+  }
+}

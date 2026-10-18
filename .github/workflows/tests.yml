@@ -1,4 +1,4 @@
-name: API and GNN prototype tests
+name: API and temporal graph tests
 
 on:
   push:

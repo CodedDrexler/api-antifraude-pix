@@ -6,10 +6,9 @@ from fastapi import FastAPI
 
 from src.constants import Policy, Settings
 from src.database import build_database
-from src.dtos.pix_dto import PixAnalysisDTO
+from src.dtos.pix_dto import PixResponseDTO
 from src.entity_risk import EntityRiskService
 from src.errors.handlers import register_error_handlers
-from src.gnn.service import DEFAULT_MODEL, GraphRiskService
 from src.gnn.temporal_service import DEFAULT_TEMPORAL_MODEL, TemporalGraphService
 from src.middlewares.request_context import register_request_middleware
 from src.middlewares.request_limits import RequestLimitsMiddleware
@@ -28,39 +27,33 @@ def create_app(settings: Settings | None = None, policy: Policy | None = None) -
 
     application = FastAPI(
         title="Pix Antifraude",
-        version="2.5.0",
+        version="1.0.0",
         lifespan=lifespan,
         openapi_tags=[{"name": "pix"}, {"name": "health"}],
         swagger_ui_parameters={"defaultModelsExpandDepth": 0},
         description=(
             "Analisa um Pix e responde: **approved** (aprovar), **two_factor_required** "
             "(solicitar autenticação adicional) ou **rejected** (bloquear).\n\n"
-            "1. Envie um Pix com um ID novo. Valores são inteiros em centavos. O primeiro Pix exige 2FA.\n"
-            "2. Consulte o mesmo ID para recuperar a decisão salva. Ative `include_details` para ver a evidência.\n\n"
+            "1. Envie um Pix com um ID novo. Valores são inteiros em centavos. Sem histórico aprovado, "
+            "valores a partir do limite configurado exigem 2FA (padrão: R$ 500); abaixo dele, as demais regras decidem.\n"
+            "2. Consulte o mesmo ID para recuperar a decisão salva. Use `include_details=true` para listar as regras aplicadas com nomes legíveis.\n\n"
             "O score vai de 0 a 100 e não representa probabilidade de fraude. "
-            "O GNN é experimental, treinado com dados sintéticos e, no padrão shadow, apenas observa. "
-            "A metadata também mostra a desconfiança acumulada da conta e um indicativo de aviso ao banco, sem envio externo. "
+            "A resposta mostra risk_score e, quando disponível, untrust_score, a saída experimental do grafo. "
+            "No modo contribute do protótipo, o grafo pode exigir 2FA para um Pix que seria aprovado; "
+            "não rejeita sozinho nem altera risk_score. "
             "A camada entity_risk separa o histórico do titular dos vínculos societários verificados; "
-            "por padrão, apenas registra a avaliação em shadow. "
-            "O grafo v2 direcionado e temporal também analisa cada Pix em observação, "
-            "com resultados separados em gnn_v2, sem alterar a decisão. "
-            "O serviço não executa 2FA, liquidação ou gestão dos limites bancários do Pix."
         ),
     )
     application.state.settings = settings
     policy_path = os.environ.get("RISK_POLICY_PATH")
     application.state.policy = policy or (Policy.from_file(policy_path) if policy_path else Policy())
     application.state.session_factory = session_factory
-    application.state.graph_service = GraphRiskService(
-        mode=os.environ.get("GNN_MODE", "shadow"),
-        model_path=os.environ.get("GNN_MODEL_PATH", str(DEFAULT_MODEL)),
-    )
     application.state.entity_service = EntityRiskService(
         mode=os.environ.get("ENTITY_RISK_MODE", "shadow"),
         registry_path=os.environ.get("ENTITY_REGISTRY_PATH") or None,
     )
     application.state.temporal_service = TemporalGraphService(
-        mode=os.environ.get("GNN_V2_MODE", "shadow"),
+        mode=os.environ.get("GNN_V2_MODE", "contribute"),
         model_path=os.environ.get("GNN_V2_MODEL_PATH", str(DEFAULT_TEMPORAL_MODEL)),
     )
     health = HealthCheckResource()
@@ -90,19 +83,21 @@ def create_app(settings: Settings | None = None, policy: Policy | None = None) -
         "/pix/transaction",
         pix.on_post,
         methods=["POST"],
-        response_model=PixAnalysisDTO,
+        response_model=PixResponseDTO,
+        response_model_exclude_unset=True,
         tags=["pix"],
         summary="Analisar um Pix",
-        description="Grava a análise e os motivos. Mesmo ID e conteúdo retornam a decisão original; conteúdo diferente gera 409.",
+        description="Grava a transação e retorna um resumo. include_details=true mostra as regras aplicadas. Mesmo ID e conteúdo retornam a decisão original; conteúdo diferente gera 409.",
     )
     application.add_api_route(
         "/pix/transaction/{transaction_id}",
         pix.on_get_by_id,
         methods=["GET"],
-        response_model=PixAnalysisDTO,
+        response_model=PixResponseDTO,
+        response_model_exclude_unset=True,
         tags=["pix"],
-        summary="Consultar uma análise",
-        description="Recupera a decisão original, sem recalcular o risco ou executar o GNN novamente.",
+        summary="Consultar uma transação Pix",
+        description="Recupera a transação pelo ID.",
     )
     register_error_handlers(application)
     # Request context wraps body limits to correlate errors and set response headers.

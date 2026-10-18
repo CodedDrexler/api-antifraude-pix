@@ -9,3 +9,7 @@ __pycache__
 *.pptx
 tmp
 .ruff_cache
+.presentation-build
+apresentacao
+docs
+.github

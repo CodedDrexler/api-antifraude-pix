@@ -7,8 +7,12 @@ from urllib.request import Request, urlopen
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session
 from sqlalchemy.pool import NullPool
+
+from src.dtos.pix_dto import PixAnalysisDTO
+from src.models.pix import PixAnalysis
 
 API_URL = os.environ.get("PIX_API_URL", "http://127.0.0.1:8000").rstrip("/")
 
@@ -31,10 +35,19 @@ def request(method, path, body=None, token=None, *, include_details=False):
 
 
 @pytest.fixture
-def api():
-    # Evidence-focused integration tests explicitly inspect the saved audit view.
+def api(database_engine):
+    # Rule/history integration tests inspect persisted audit evidence. Verify the
+    # real HTTP summary first; details no longer expose the audit snapshot.
     def detailed_request(method, path, body=None, token=None):
-        return request(method, path, body, token, include_details=True)
+        status, response, headers = request(method, path, body, token, include_details=True)
+        if status == 200 and path.startswith("/pix/transaction"):
+            with Session(database_engine) as session:
+                saved = session.scalar(select(PixAnalysis).where(PixAnalysis.analysis_key == response["key"]))
+                assert saved is not None
+                audit = PixAnalysisDTO.from_model(saved)
+                assert response == audit.to_response(include_details=True).model_dump(exclude_unset=True)
+                response = audit.model_dump()
+        return status, response, headers
 
     return detailed_request
 
@@ -84,10 +97,6 @@ def post(api, payload):
 
 def seed_profile(api, payload, count, amount=1000):
     at = datetime.fromisoformat(payload["transaction_date"])
-    bootstrap = new_transaction(
-        payload, amount=amount, transaction_date=(at - timedelta(hours=count + 1)).isoformat()
-    )
-    assert post(api, bootstrap)["status"] == "two_factor_required"
     for index in reversed(range(count)):
         seed = new_transaction(
             payload, amount=amount, transaction_date=(at - timedelta(hours=index + 1)).isoformat()

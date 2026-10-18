@@ -1,4 +1,4 @@
-"""Live v2 observation: bounded history, explicit abstention, no decision contribution."""
+"""Bounded graph inference with abstention and optional prototype 2FA contribution."""
 
 import math
 from dataclasses import dataclass, field
@@ -6,10 +6,15 @@ from pathlib import Path
 from time import perf_counter
 
 from src.controllers.account_untrust import OWN_EVIDENCE_VERSION
+from src.gnn.contribution import DEFAULT_CONTRIBUTION_POLICY, ContributionPolicy, combine_temporal_risk
 from src.gnn.temporal_graph import FEATURE_VERSION, TRANSACTION_FEATURES, GraphEvent, build_temporal_graph
 from src.gnn.temporal_model import TemporalModel
 
-DEFAULT_TEMPORAL_MODEL = Path(__file__).resolve().parents[2] / "models/gnn-directed-temporal-v2-seed-42.json"
+ORIGINAL_TEMPORAL_MODEL = Path(__file__).resolve().parents[2] / "models/gnn-directed-temporal-v2-seed-42.json"
+DEFAULT_TEMPORAL_MODEL = (
+    Path(__file__).resolve().parents[2] / "models/false-positive-v1/gnn-false-positive-v1-seed-42.json"
+)
+TEMPORAL_MODEL_LABEL = "Modelo Relacional Temporal v2 — experimental"
 MAX_TEMPORAL_HISTORY = 300
 MAX_OWN_EVIDENCE = 300
 MAX_GRAPH_ENTITIES = 100
@@ -25,23 +30,34 @@ class TemporalHistory:
 
 
 class TemporalGraphService:
-    def __init__(self, mode="shadow", model_path=DEFAULT_TEMPORAL_MODEL):
-        if mode not in {"off", "shadow"}:
-            raise ValueError("GNN_V2_MODE must be off or shadow; contribution is not enabled")
+    def __init__(
+        self, mode="shadow", model_path=DEFAULT_TEMPORAL_MODEL, contribution_path=DEFAULT_CONTRIBUTION_POLICY
+    ):
+        if mode not in {"off", "shadow", "contribute"}:
+            raise ValueError("GNN_V2_MODE must be off, shadow or contribute")
         self.mode = mode
         self.model = None
+        self.contribution = None
         if mode != "off":
             try:
                 self.model = TemporalModel(model_path)
             except (OSError, ValueError, KeyError, TypeError, OverflowError):
+                pass
+            try:
+                self.contribution = ContributionPolicy.from_file(contribution_path)
+            except (OSError, ValueError, TypeError):
                 pass
 
     @property
     def enabled(self):
         return self.mode != "off" and self.model is not None
 
+    def combine(self, status, metadata, policy):
+        return combine_temporal_risk(status, metadata, policy, self.mode, self.contribution)
+
     def assess(self, candidate, received_at, history: TemporalHistory):
         result = {
+            "label": TEMPORAL_MODEL_LABEL,
             "mode": self.mode,
             "experimental": True,
             "training_data": "synthetic",
@@ -58,7 +74,7 @@ class TemporalGraphService:
             "history_days": 30,
             "own_window_hours": 24,
             "own_evidence_version": OWN_EVIDENCE_VERSION,
-            "training_evidence_policy": "pix-score-v7",
+            "training_evidence_policy": self.model.training_evidence_policy if self.model else None,
             "minimum_history": 3,
             "data_basis": "non_rejected_attempts_not_confirmed_settlement",
             "event_time_cutoff": candidate["transaction_date"],

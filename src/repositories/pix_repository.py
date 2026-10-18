@@ -80,8 +80,8 @@ class PixRepository:
         registered_count = self.session.scalar(
             select(func.count()).where(payer, PixAnalysis.transaction_date <= at)
         )
-        # Rejected/pending attempts must not raise an established amount baseline.
-        # Until the first approval, one initial pending request bootstraps the demo.
+        # Only local approvals form the value reference. A requested 2FA does
+        # not prove that authentication or payment was completed.
         amounts = self.session.scalars(
             select(PixAnalysis.amount)
             .where(payer, PixAnalysis.status == "approved", PixAnalysis.transaction_date <= at)
@@ -89,16 +89,6 @@ class PixRepository:
             .limit(policy.profile_history_size)
         ).all()
         profile_basis = "approved" if amounts else "unavailable"
-        if not amounts:
-            bootstrap = self.session.scalar(
-                select(PixAnalysis.amount)
-                .where(payer, PixAnalysis.status == "two_factor_required", PixAnalysis.transaction_date <= at)
-                .order_by(PixAnalysis.transaction_date, PixAnalysis.id)
-                .limit(1)
-            )
-            if bootstrap is not None:
-                amounts = [bootstrap]
-                profile_basis = "initial_pending_attempt"
         device_window = (
             PixAnalysis.created_at <= received_at,
             PixAnalysis.transaction_date >= at - timedelta(hours=policy.device_window_hours),
@@ -206,26 +196,6 @@ class PixRepository:
             )
         ).one()
         return UntrustHistory(int(points), events)
-
-    def graph_history(self, transaction, destination, limit=300, days=30):
-        at = transaction.transaction_date
-        related = or_(
-            PixAnalysis.source_document == transaction.source_account.owner.document_number,
-            PixAnalysis.destination_identity == destination,
-            PixAnalysis.device_id == transaction.source.device_id,
-        )
-        rows = self.session.scalars(
-            select(PixAnalysis.payload)
-            .where(
-                related,
-                PixAnalysis.transaction_date >= at - timedelta(days=days),
-                PixAnalysis.transaction_date <= at,
-            )
-            .order_by(PixAnalysis.transaction_date.desc(), PixAnalysis.id.desc())
-            .limit(limit + 1)
-        ).all()
-        # Refuse an incomplete graph instead of treating a truncated neighborhood as complete.
-        return list(rows[:limit]), len(rows) > limit
 
     def entity_evidence(self, documents, at, hours=24, limit=2000):
         """Independent own-account increments across accounts, by trusted receipt time.
