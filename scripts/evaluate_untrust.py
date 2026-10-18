@@ -16,7 +16,7 @@ from src.controllers.account_untrust import UntrustHistory, assess_untrust
 from src.controllers.decision_engine import DecisionEngine
 from src.controllers.pix_controller import fingerprint
 from src.gnn.synthetic import scenario
-from src.repositories.pix_repository import History
+from src.risk.types import History
 from src.risk_context import is_night
 from src.schemas.pix import PixTransactionCreate
 
@@ -54,7 +54,6 @@ def replay(candidate, records, policy):
             recent_count=len(recent),
             recent_amount=sum(row[0].amount for row in recent),
             approved_count=len(familiar),
-            approved_amount=sum(row[0].amount for row in familiar),
             known_destination=any(
                 identity(row[0].destination_account) == identity(tx.destination_account) for row in familiar
             ),

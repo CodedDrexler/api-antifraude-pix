@@ -7,13 +7,13 @@ from src.risk_context import BRASILIA
 def evaluate(context: RuleContext) -> Iterator[RuleMatch]:
     transaction = context.transaction
     history = context.history
-    p = context.policy
+    policy = context.policy
     if (
         transaction.source.channel.casefold() == "app"
         and context.night
-        and history.approved_count >= p.night_min_history
+        and history.approved_count >= policy.night_min_history
         and history.approved_night_count == 0
-        and transaction.amount >= p.night_min_amount
+        and transaction.amount >= policy.night_min_amount
         and (not history.known_device or not history.known_destination)
     ):
         yield RuleMatch(
@@ -24,9 +24,9 @@ def evaluate(context: RuleContext) -> Iterator[RuleMatch]:
                 "approved_night_transactions": history.approved_night_count,
             },
             {
-                "start_hour": p.night_start_hour,
-                "end_hour": p.night_end_hour,
+                "start_hour": policy.night_start_hour,
+                "end_hour": policy.night_end_hour,
                 "timezone": "UTC-03:00",
-                "minimum_amount": p.night_min_amount,
+                "minimum_amount": policy.night_min_amount,
             },
         )

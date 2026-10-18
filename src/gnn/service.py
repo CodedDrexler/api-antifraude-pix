@@ -6,7 +6,8 @@ from pathlib import Path
 
 from src.gnn.graph import build_graph
 from src.gnn.model import GraphSageModel
-from src.risk_context import FACTOR_LABELS
+from src.risk.scoring import rule_evidence, score_decision, summarize_factor, summarize_score
+from src.risk.types import RuleMatch
 
 MAX_HISTORY = 300
 HISTORY_DAYS = 30
@@ -100,70 +101,24 @@ def combine_graph_risk(status, metadata, graph_result):
     }
     if graph_result["mode"] != "contribute" or graph_result["status"] != "scored":
         return status, metadata
+    scoring = metadata["policy"]["scoring"]
     proposed_points = graph_result["proposed_points"]
-    factor_weight = metadata["policy"]["scoring"]["factor_weights"]["graph"]
-    weighted_points = proposed_points * factor_weight // 100
-    points = min(MAX_POINTS, weighted_points)
     metadata["policy"]["version"] += "+gnn-experimental-v1"
     if proposed_points:
-        metadata["triggered_rules"].append(
-            {
-                "code": "gnn_relational_pattern",
-                "group": "graph",
-                "risk_factor": "graph",
-                "weight": proposed_points,
-                "weighted_points": weighted_points,
-                "contribution": points,
-                "observed": graph_result["gnn_score"],
-                "threshold": graph_result["threshold"],
-                "hard_limit": False,
-            }
-        )
+        factor_weight = scoring["factor_weights"]["graph"]
+        match = RuleMatch("gnn_relational_pattern", graph_result["gnn_score"], graph_result["threshold"])
+        rule = rule_evidence(match, "graph", proposed_points, factor_weight)
+        factor = summarize_factor("graph", [rule], MAX_POINTS, factor_weight)
+        metadata["triggered_rules"].append(rule)
         metadata["reasons"] = [rule["code"] for rule in metadata["triggered_rules"]]
         metadata["raw_score"] += proposed_points
-        metadata["group_scores"]["graph"] = {
-            "raw_score": proposed_points,
-            "score": points,
-            "cap": MAX_POINTS,
-        }
-        metadata["risk_factors"].append(
-            {
-                "name": "graph",
-                "label": FACTOR_LABELS["graph"],
-                "raw_score": proposed_points,
-                "weighted_score": weighted_points,
-                "score": points,
-                "cap": MAX_POINTS,
-                "weight": factor_weight,
-                "rules": ["gnn_relational_pattern"],
-                "hard_limits": [],
-            }
-        )
-        metadata["risk_group_count"] += int(points > 0)
-    total = sum(group["score"] for group in metadata["group_scores"].values())
-    metadata["risk_score"] = min(100, total)
-    metadata["risk_factors_sum"] = total
-    metadata["score_cap_reduction"] = max(0, total - 100)
-    # This is the change to the final score, which can be smaller than the proposed points at the cap.
+        metadata["group_scores"]["graph"] = {key: factor[key] for key in ("raw_score", "score", "cap")}
+        metadata["risk_factors"].append(factor)
+    metadata.update(summarize_score(metadata["group_scores"], scoring))
+    # Applied points can be smaller than the factor contribution at the global cap.
     metadata["gnn"]["applied_points"] = metadata["risk_score"] - metadata["rule_risk_score"]
-    scoring = metadata["policy"]["scoring"]
-    score = metadata["risk_score"]
-    metadata["risk_level"] = (
-        "high"
-        if score >= scoring["rejection_threshold"]
-        else "elevated"
-        if score >= scoring["two_factor_threshold"]
-        else "low"
-    )
-    if metadata["hard_limits"]:
-        return "rejected", metadata
-    if (
-        score >= scoring["rejection_threshold"]
-        and metadata["risk_group_count"] >= scoring["minimum_rejection_groups"]
-    ):
-        return "rejected", {**metadata, "decision_source": "risk_score"}
-    if score >= scoring["two_factor_threshold"]:
-        return "two_factor_required", {**metadata, "decision_source": "risk_score"}
-    if metadata["decision_source"] in {"first_transaction", "insufficient_history"}:
+    status, source = score_decision(metadata, scoring)
+    if status == "approved" and metadata["decision_source"] in {"first_transaction", "insufficient_history"}:
         return "two_factor_required", metadata
-    return "approved", {**metadata, "decision_source": "risk_score"}
+    metadata["decision_source"] = source
+    return status, metadata

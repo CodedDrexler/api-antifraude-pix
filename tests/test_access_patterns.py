@@ -10,12 +10,12 @@ from test_pix import post, seed_profile
 from src.constants import FactorWeights, Policy, ScoringPolicy
 from src.controllers.decision_engine import DecisionEngine
 from src.gnn.service import combine_graph_risk
-from src.repositories.pix_repository import History
+from src.risk.types import History
 from src.schemas.pix import PixTransactionCreate
 
 
 def evaluate(payload, **changes):
-    history = History(0, 0, 3, 60_000, False, False, 3, 60_000)
+    history = History(0, 0, 3, False, False, 3, 60_000)
     return DecisionEngine(Policy()).evaluate(
         PixTransactionCreate.model_validate(payload),
         replace(history, **changes),
@@ -76,7 +76,7 @@ def test_night_minimum_amount_and_configurable_start(payload):
     transaction = PixTransactionCreate.model_validate(payload)
     _, metadata = DecisionEngine(replace(Policy(), night_start_hour=22)).evaluate(
         transaction,
-        History(0, 0, 3, 60_000, False, False, 3, 60_000),
+        History(0, 0, 3, False, False, 3, 60_000),
     )
     assert "unusual_night_app" not in metadata["reasons"]
 
@@ -116,7 +116,7 @@ def test_missing_baseline_after_rejected_attempts_requires_two_factor_even_at_ze
     )
     status, metadata = DecisionEngine(policy).evaluate(
         PixTransactionCreate.model_validate(payload),
-        History(0, 0, 0, 0, False, False, registered_count=2),
+        History(0, 0, 0, False, False, registered_count=2),
     )
     assert status == "two_factor_required"
     assert metadata["decision_source"] == "insufficient_history"

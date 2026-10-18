@@ -13,7 +13,8 @@ from src.constants import FactorWeights, Policy, ScoringPolicy
 from src.controllers.account_untrust import UntrustHistory, assess_untrust
 from src.controllers.decision_engine import DecisionEngine
 from src.controllers.pix_controller import fingerprint
-from src.repositories.pix_repository import History, PixRepository
+from src.repositories.pix_repository import PixRepository
+from src.risk.types import History
 from src.schemas.pix import PixTransactionCreate
 
 
@@ -99,7 +100,7 @@ def test_concurrent_new_ids_detect_duplicate_and_retries_stay_idempotent(api, pa
 
 def test_duplicate_factor_weight_is_configurable_without_increasing_account_untrust(payload):
     policy = Policy()
-    history = History(1, 1000, 1, 1000, True, True, 1, 1000, duplicate_transaction_id="previous")
+    history = History(1, 1000, 1, True, True, 1, 1000, duplicate_transaction_id="previous")
     transaction = PixTransactionCreate.model_validate(payload)
     status, metadata = DecisionEngine(policy).evaluate(transaction, history)
     assert status == "two_factor_required"
@@ -142,7 +143,7 @@ def test_repository_respects_custom_duplicate_window(api, payload):
 
 
 def test_duplicate_never_overrides_a_hard_rejection(payload):
-    history = History(5, 5000, 1, 1000, True, True, 1, 1000, duplicate_transaction_id="previous")
+    history = History(5, 5000, 1, True, True, 1, 1000, duplicate_transaction_id="previous")
     status, metadata = DecisionEngine(Policy()).evaluate(
         PixTransactionCreate.model_validate(payload), history
     )

@@ -12,7 +12,7 @@ from src.controllers.account_untrust import UntrustHistory, assess_untrust
 from src.controllers.decision_engine import DecisionEngine
 from src.controllers.pix_controller import PixController
 from src.models.pix import PixAnalysis
-from src.repositories.pix_repository import History
+from src.risk.types import History
 from src.schemas.pix import PixTransactionCreate
 
 
@@ -20,7 +20,7 @@ def baseline(payload, amount=5000):
     payload["amount"] = amount
     return DecisionEngine(Policy()).evaluate(
         PixTransactionCreate.model_validate(payload),
-        History(0, 0, 3, 3000, True, True, 3, 3000),
+        History(0, 0, 3, True, True, 3, 3000),
     )
 
 
@@ -74,7 +74,7 @@ def test_first_transaction_and_account_age_alone_do_not_build_untrust(payload):
     payload["source_account"]["opening_date"] = payload["transaction_date"]
     status, metadata = DecisionEngine(Policy()).evaluate(
         PixTransactionCreate.model_validate(payload),
-        History(0, 0, 0, 0, False, False),
+        History(0, 0, 0, False, False),
     )
     assert metadata["risk_score"] == 45
     _, untrust, _ = assess_untrust(status, metadata, UntrustHistory(), UntrustPolicy())
@@ -189,7 +189,7 @@ def test_server_clock_not_caller_event_time_is_passed_to_account_history(payload
     controller = PixController(session, Policy())
     repository = Mock()
     repository.get.return_value = None
-    repository.history.return_value = History(0, 0, 3, 3000, True, True, 3, 3000)
+    repository.history.return_value = History(0, 0, 3, True, True, 3, 3000)
     repository.untrust_history.return_value = UntrustHistory(40, 2)
     repository.create.side_effect = lambda **values: PixAnalysis(**values)
     controller.repository = repository

@@ -4,7 +4,7 @@ import pytest
 
 from src.constants import Policy, RuleWeights, ScoringPolicy
 from src.controllers.decision_engine import DecisionEngine
-from src.repositories.pix_repository import History
+from src.risk.types import History
 from src.schemas.pix import PixTransactionCreate
 
 
@@ -22,7 +22,7 @@ def test_score_boundaries_and_single_group_rejection_guard(payload, points, expe
     policy = replace(Policy(), scoring=replace(ScoringPolicy(), weights=weights))
     payload["amount"] = 100_000
     status, metadata = DecisionEngine(policy).evaluate(
-        PixTransactionCreate.model_validate(payload), History(0, 0, 0, 0, False, False, 1, 10_000)
+        PixTransactionCreate.model_validate(payload), History(0, 0, 0, False, False, 1, 10_000)
     )
     assert status == expected
     assert metadata["risk_score"] == points

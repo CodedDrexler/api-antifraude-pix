@@ -52,15 +52,14 @@ class PixController:
         history = self.repository.history(
             transaction, destination_identity, self.engine.policy, account_identity
         )
-        status, metadata = self.engine.evaluate(transaction, history)
-        baseline = metadata
+        status, baseline = self.engine.evaluate(transaction, history)
         graph_history, truncated = [], False
         if self.graph_service.enabled:
             graph_history, truncated = self.repository.graph_history(
                 transaction, destination_identity, MAX_HISTORY, HISTORY_DAYS
             )
         graph_result = self.graph_service.assess(payload, graph_history, truncated)
-        status, metadata = combine_graph_risk(status, metadata, graph_result)
+        status, metadata = combine_graph_risk(status, baseline, graph_result)
         untrust_policy = self.engine.policy.untrust
         untrust_history = (
             self.repository.untrust_history(

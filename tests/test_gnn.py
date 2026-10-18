@@ -12,13 +12,13 @@ from src.gnn.graph import build_graph
 from src.gnn.model import GraphSageModel
 from src.gnn.service import DEFAULT_MODEL, GraphRiskService, combine_graph_risk
 from src.gnn.synthetic import scenario
-from src.repositories.pix_repository import History
+from src.risk.types import History
 from src.schemas.pix import PixTransactionCreate
 
 
 def base_decision(payload):
     return DecisionEngine(Policy()).evaluate(
-        PixTransactionCreate.model_validate(payload), History(0, 0, 0, 0, False, False, 1, 1000)
+        PixTransactionCreate.model_validate(payload), History(0, 0, 0, False, False, 1, 1000)
     )
 
 
@@ -143,7 +143,7 @@ def test_graph_cannot_reduce_a_hard_rejection_or_exceed_score_cap(payload):
     payload["amount"] = 3_000_000
     payload["source_account"]["opening_date"] = payload["transaction_date"]
     status, metadata = DecisionEngine(Policy()).evaluate(
-        PixTransactionCreate.model_validate(payload), History(0, 0, 0, 0, False, False, 1, 3_000_000)
+        PixTransactionCreate.model_validate(payload), History(0, 0, 0, False, False, 1, 3_000_000)
     )
     combined, enriched = combine_graph_risk(status, metadata, high_graph_result())
     assert combined == "rejected"

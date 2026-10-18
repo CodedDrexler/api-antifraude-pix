@@ -8,7 +8,7 @@ from test_pix import post
 from src.constants import FactorWeights, Policy, ScoringPolicy
 from src.controllers.decision_engine import DecisionEngine
 from src.gnn.service import combine_graph_risk
-from src.repositories.pix_repository import History
+from src.risk.types import History
 from src.schemas.pix import PixTransactionCreate
 
 
@@ -18,7 +18,7 @@ def test_dynamic_ceiling_uses_available_history_without_a_minimum(payload, count
     payload["amount"] = amount
     status, metadata = DecisionEngine(Policy()).evaluate(
         PixTransactionCreate.model_validate(payload),
-        History(0, 0, 0, 0, False, False, count, count * 1000),
+        History(0, 0, 0, False, False, count, count * 1000),
     )
     assert metadata["risk_score"] == expected
     assert metadata["risk_factors_sum"] == expected
@@ -30,7 +30,7 @@ def test_dynamic_ceiling_uses_available_history_without_a_minimum(payload, count
 def test_fractional_average_is_compared_exactly_and_policy_is_configurable(payload):
     policy = replace(Policy(), profile_history_size=2, profile_multiplier=3)
     transaction = PixTransactionCreate.model_validate(payload)
-    history = History(0, 0, 0, 0, False, False, 2, 667)
+    history = History(0, 0, 0, False, False, 2, 667)
     assert DecisionEngine(policy).evaluate(transaction, history)[1]["risk_score"] == 0
     transaction.amount = 1001
     assert DecisionEngine(policy).evaluate(transaction, history)[1]["risk_score"] == 80
@@ -53,7 +53,7 @@ def test_first_pix_requires_two_factor_even_with_zero_factor_weight_and_graph(pa
     )
     status, metadata = DecisionEngine(policy).evaluate(
         PixTransactionCreate.model_validate(payload),
-        History(0, 0, 0, 0, False, False),
+        History(0, 0, 0, False, False),
     )
     assert status == "two_factor_required"
     assert metadata["decision_source"] == "first_transaction"

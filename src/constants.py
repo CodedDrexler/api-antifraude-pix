@@ -193,7 +193,6 @@ class Policy:
 class Settings:
     database_url: str
     internal_token: str
-    service_name: str = "pix-antifraud"
 
     @classmethod
     def from_env(cls):

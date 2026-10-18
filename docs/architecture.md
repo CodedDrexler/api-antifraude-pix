@@ -31,6 +31,7 @@ src/resources/                 fronteira HTTP
 src/controllers/               fluxo, agregação do score e commit
 src/risk/rules/                regras puras separadas por fator de risco
 src/risk/types.py              contexto de avaliação e sinais encontrados
+src/risk/scoring.py            cálculo compartilhado de pontos, tetos e decisão
 src/repositories/              consultas, travas e escrita
 src/models/                    mapeamento das tabelas
 src/dtos/                      resposta pública
@@ -45,7 +46,10 @@ As regras de `activity`, `duplication`, `exposure`, `account`, `counterparty`, `
 Cada função recebe um `RuleContext` e produz `RuleMatch` com código, observação,
 limiar e indicação de limite forte. O registro explícito em `src/risk/registry.py`
 preserva a ordem dos motivos. As regras não consultam o banco nem calculam pontos.
-O `DecisionEngine` concentra pesos configuráveis, tetos, prioridades e a resposta.
+O `DecisionEngine` reúne regras, histórico e evidências da resposta. As funções
+de `src/risk/scoring.py` calculam pesos, tetos e faixas de decisão tanto para
+as regras quanto para a contribuição opcional do GNN. O tipo `History` fica
+em `src/risk/types.py`, sem depender do repository ou de SQLAlchemy.
 O GNN continua em `src/gnn/`, com contribuição aplicada depois do score das regras.
 O controller obtém o histórico pelo repository e escolhe quando confirmar a escrita.
 O resource devolve exclusivamente `key`, `status` e `metadata`.

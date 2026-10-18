@@ -2,9 +2,26 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 from src.constants import Policy
-from src.repositories.pix_repository import History
 from src.risk_context import is_night
 from src.schemas.pix import PixTransactionCreate
+
+
+@dataclass(frozen=True)
+class History:
+    recent_count: int
+    recent_amount: int
+    approved_count: int
+    known_destination: bool
+    known_device: bool
+    profile_count: int = 0
+    profile_amount: int = 0
+    registered_count: int | None = None
+    profile_basis: str = "provided_history"
+    device_other_owners: int = 0
+    payer_other_devices: int = 0
+    approved_night_count: int = 0
+    duplicate_transaction_id: str | None = None
+    duplicate_elapsed_seconds: float | None = None
 
 
 @dataclass(frozen=True)

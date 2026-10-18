@@ -5,13 +5,13 @@ import pytest
 
 from src.constants import FactorWeights, GroupCaps, Policy, RuleFactors, ScoringPolicy
 from src.controllers.decision_engine import DecisionEngine
-from src.repositories.pix_repository import History
+from src.risk.types import History
 from src.schemas.pix import PixTransactionCreate
 
 
 def evaluate(payload, scoring, history=None):
     return DecisionEngine(replace(Policy(), scoring=scoring)).evaluate(
-        PixTransactionCreate.model_validate(payload), history or History(0, 0, 0, 0, False, False, 1, 1000)
+        PixTransactionCreate.model_validate(payload), history or History(0, 0, 0, False, False, 1, 1000)
     )
 
 

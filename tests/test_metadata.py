@@ -9,7 +9,7 @@ from src.controllers.account_untrust import UntrustHistory
 from src.controllers.pix_controller import PixController, fingerprint
 from src.dtos.pix_dto import PixAnalysisDTO
 from src.models.pix import PixAnalysis
-from src.repositories.pix_repository import History
+from src.risk.types import History
 from src.schemas.pix import PixTransactionCreate
 
 
@@ -66,7 +66,7 @@ def test_processing_timer_covers_analysis_and_is_not_recomputed(payload, monkeyp
     controller = PixController(session, Policy())
     repository = Mock()
     repository.get.return_value = None
-    repository.history.return_value = History(0, 0, 0, 0, False, False)
+    repository.history.return_value = History(0, 0, 0, False, False)
     repository.untrust_history.return_value = UntrustHistory()
 
     def create(**values):

@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from datetime import timedelta
 from hashlib import sha256
 
@@ -8,26 +7,8 @@ from sqlalchemy.orm import Session
 from src.constants import Policy
 from src.controllers.account_untrust import UntrustHistory
 from src.models.pix import PixAnalysis
+from src.risk.types import History
 from src.schemas.pix import PixTransactionCreate
-
-
-@dataclass(frozen=True)
-class History:
-    recent_count: int
-    recent_amount: int
-    approved_count: int
-    approved_amount: int
-    known_destination: bool
-    known_device: bool
-    profile_count: int = 0
-    profile_amount: int = 0
-    registered_count: int | None = None
-    profile_basis: str = "provided_history"
-    device_other_owners: int = 0
-    payer_other_devices: int = 0
-    approved_night_count: int = 0
-    duplicate_transaction_id: str | None = None
-    duplicate_elapsed_seconds: float | None = None
 
 
 class PixRepository:
@@ -68,10 +49,9 @@ class PixRepository:
         )
         local_hour = func.extract("hour", func.timezone("Etc/GMT+3", PixAnalysis.transaction_date))
         night_condition = or_(local_hour >= policy.night_start_hour, local_hour < policy.night_end_hour)
-        approved_count, approved_amount, night_count = self.session.execute(
+        approved_count, night_count = self.session.execute(
             select(
                 func.count(),
-                func.coalesce(func.sum(PixAnalysis.amount), 0),
                 func.count().filter(night_condition),
             ).where(*approved)
         ).one()
@@ -151,7 +131,6 @@ class PixRepository:
             recent_count=count,
             recent_amount=int(amount),
             approved_count=approved_count,
-            approved_amount=int(approved_amount),
             known_destination=known_destination,
             known_device=known_device,
             profile_count=len(amounts),

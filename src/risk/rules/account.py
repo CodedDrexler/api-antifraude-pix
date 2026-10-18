@@ -5,6 +5,6 @@ from src.risk.types import RuleContext, RuleMatch
 
 
 def evaluate(context: RuleContext) -> Iterator[RuleMatch]:
-    p = context.policy
-    if context.age < timedelta(days=p.new_account_days):
-        yield RuleMatch("new_source_account", context.age.total_seconds(), p.new_account_days * 86400)
+    policy = context.policy
+    if context.age < timedelta(days=policy.new_account_days):
+        yield RuleMatch("new_source_account", context.age.total_seconds(), policy.new_account_days * 86400)
