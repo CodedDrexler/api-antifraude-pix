@@ -1,6 +1,8 @@
 from dataclasses import asdict
 
 from src.constants import Policy
+from src.risk.attribution import decision_causes
+from src.risk.contextual_trust import assess as assess_contextual_trust
 from src.risk.registry import evaluate_rules
 from src.risk.scoring import rule_evidence, score_decision, summarize_factor, summarize_score
 from src.risk.types import History, RuleContext
@@ -16,17 +18,28 @@ class DecisionEngine:
     def evaluate(self, transaction: PixTransactionCreate, history: History):
         context = RuleContext(transaction, history, self.policy)
         scoring = self.policy.scoring
+        contextual_trust = assess_contextual_trust(context)
+        contextual_trust.update(profile_points_before=0, profile_points_after=0)
         rules = []
         for match in evaluate_rules(context):
             factor = getattr(scoring.rule_factors, match.code)
-            rules.append(
-                rule_evidence(
-                    match,
-                    factor,
-                    getattr(scoring.weights, match.code),
-                    getattr(scoring.factor_weights, factor),
-                )
+            evidence = rule_evidence(
+                match,
+                factor,
+                getattr(scoring.weights, match.code),
+                getattr(scoring.factor_weights, factor),
             )
+            if match.code == "amount_above_customer_profile":
+                before = evidence["weighted_points"]
+                if contextual_trust["eligible"]:
+                    evidence["points_before_context"] = before
+                    evidence["weighted_points"] = 0
+                    evidence["context_adjustment"] = "familiar_relationship_amount"
+                    contextual_trust["applied"] = True
+                contextual_trust.update(
+                    profile_points_before=before, profile_points_after=evidence["weighted_points"]
+                )
+            rules.append(evidence)
 
         factors = []
         for name, cap in asdict(scoring.group_caps).items():
@@ -54,6 +67,7 @@ class DecisionEngine:
             "profile_transactions": history.profile_count,
             "registered_transactions": context.registered_count,
             "profile_basis": history.profile_basis,
+            "contextual_trust": contextual_trust,
             "profile_amount": history.profile_amount,
             "profile_average": history.profile_amount / history.profile_count
             if history.profile_count
@@ -82,6 +96,7 @@ class DecisionEngine:
             status = "two_factor_required"
             source = "first_transaction" if context.registered_count == 0 else "insufficient_history"
         metadata["decision_source"] = source
+        metadata["decision_causes"] = decision_causes(metadata, status)
         if history.duplicate_transaction_id:
             metadata["duplicate_payment"] = {
                 "message": "Possível pagamento duplicado: existe uma tentativa recente com o mesmo valor para este destinatário.",

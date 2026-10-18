@@ -1,0 +1,2446 @@
+{
+  "scope": "SYNTHETIC ONLY; no real confirmed fraud, no deployment or production writes",
+  "policy": {
+    "version": "pix-score-v6",
+    "duplicate_window_seconds": 120,
+    "velocity_minutes": 10,
+    "velocity_limit": 5,
+    "accumulated_amount": 3000000,
+    "new_account_days": 7,
+    "profile_days": 30,
+    "profile_history_size": 10,
+    "profile_multiplier": 5,
+    "profile_min_amount": 50000,
+    "device_min_history": 3,
+    "device_min_amount": 50000,
+    "destination_min_history": 3,
+    "device_window_hours": 24,
+    "device_owner_limit": 3,
+    "payer_device_limit": 3,
+    "night_start_hour": 20,
+    "night_end_hour": 6,
+    "night_min_amount": 50000,
+    "night_min_history": 3,
+    "untrust": {
+      "enabled": true,
+      "rejection_enabled": false,
+      "window_hours": 24,
+      "two_factor_threshold": 40,
+      "notification_threshold": 60,
+      "rejection_threshold": 80,
+      "maximum_increment": 25,
+      "score_divisor": 4,
+      "minimum_rejection_events": 4
+    },
+    "scoring": {
+      "two_factor_threshold": 30,
+      "rejection_threshold": 80,
+      "minimum_rejection_groups": 2,
+      "weights": {
+        "velocity_above_limit": 80,
+        "accumulated_amount_above_limit": 80,
+        "first_transaction": 30,
+        "new_source_account": 15,
+        "new_destination_account": 15,
+        "unfamiliar_destination": 15,
+        "amount_above_customer_profile": 80,
+        "unfamiliar_device": 20,
+        "shared_device": 30,
+        "multiple_devices": 20,
+        "unusual_night_app": 15,
+        "insufficient_amount_history": 30,
+        "possible_duplicate_payment": 30
+      },
+      "group_caps": {
+        "exposure": 80,
+        "activity": 80,
+        "account": 15,
+        "counterparty": 25,
+        "profile": 80,
+        "device": 40,
+        "access_context": 15,
+        "duplication": 30
+      },
+      "factor_weights": {
+        "exposure": 100,
+        "activity": 100,
+        "account": 100,
+        "counterparty": 100,
+        "profile": 100,
+        "device": 100,
+        "graph": 100,
+        "access_context": 100,
+        "duplication": 100
+      },
+      "rule_factors": {
+        "velocity_above_limit": "activity",
+        "accumulated_amount_above_limit": "activity",
+        "first_transaction": "exposure",
+        "new_source_account": "account",
+        "new_destination_account": "counterparty",
+        "unfamiliar_destination": "counterparty",
+        "amount_above_customer_profile": "profile",
+        "unfamiliar_device": "device",
+        "shared_device": "device",
+        "multiple_devices": "device",
+        "unusual_night_app": "access_context",
+        "insufficient_amount_history": "exposure",
+        "possible_duplicate_payment": "duplication"
+      }
+    }
+  },
+  "graph_policy_frozen_before_evaluation": {
+    "hops": 2,
+    "neighbors": 10,
+    "window_hours": 24,
+    "half_life_hours": 12,
+    "hop_decay": 0.5,
+    "suspicious_threshold": 40,
+    "maximum_points": 20,
+    "points_per_suspect": 5,
+    "repass_minutes": 30,
+    "repass_ratio": 0.8,
+    "repass_events": 2
+  },
+  "methods": [
+    "baseline",
+    "count_neighbors",
+    "weighted_neighbors",
+    "weighted_with_repass",
+    "existing_gnn"
+  ],
+  "design": {
+    "legacy": "Existing unchanged generator, 600 validation/1200 test, fresh seeds 10000+/20000+; labels are scenario fraud intent",
+    "stress": "9 explicit source-account scenarios, 50 validation/100 test each; labels are mule intent",
+    "stress_boundaries": "Each scenario has half familiar 0-point candidates and half unfamiliar new-recipient 25-point candidates; own behavior is otherwise quiet",
+    "split": "May validation and September test; separate synthetic identities; same generator in both",
+    "untrust": "Recomputed from independent existing own-account rules, available before candidate; no labels or propagated score",
+    "history": "Frozen baseline replay; only final candidate is changed in each method; no full-policy feedback simulation",
+    "links": "Non-rejected historical attempts, including pending 2FA, as proxy; not confirmed settled Pix",
+    "time": "Ordered event timestamps simulate trusted receipt clock; no out-of-order or delayed-label data",
+    "score_thresholds": "Selected on validation per method for score ranking only, with 0/1/5 percent FPR budgets; frozen for test",
+    "limitations": "Balanced/enriched synthetic mix; no real-world precision, calibration, money-loss or production latency claim",
+    "development_disclosure": "Initial runs inspected during fixture debugging: intended 25-point candidates were below the minimum amount, and stale-contact amounts accidentally changed the payer profile. Corrected and regression-tested; not an untouched confirmatory holdout."
+  },
+  "datasets": {
+    "legacy": {
+      "validation": {
+        "samples": 600,
+        "fraud_or_mule": 195,
+        "methods": {
+          "baseline": {
+            "rejection": {
+              "tp": 19,
+              "fp": 21,
+              "fn": 176,
+              "tn": 384,
+              "precision": 0.475,
+              "recall": 0.09743589743589744,
+              "false_positive_rate": 0.05185185185185185
+            },
+            "intervention_2fa_or_rejection": {
+              "tp": 195,
+              "fp": 237,
+              "fn": 0,
+              "tn": 168,
+              "precision": 0.4513888888888889,
+              "recall": 1.0,
+              "false_positive_rate": 0.5851851851851851
+            },
+            "changed_decisions": 0,
+            "additional_fraud_interventions": 0,
+            "additional_legitimate_interventions": 0,
+            "additional_fraud_rejections": 0,
+            "additional_legitimate_rejections": 0,
+            "positive_graph_contributions": 0,
+            "mean_added_score": 0.0,
+            "decisions": {
+              "two_factor_required": 392,
+              "approved": 168,
+              "rejected": 40
+            }
+          },
+          "count_neighbors": {
+            "rejection": {
+              "tp": 19,
+              "fp": 21,
+              "fn": 176,
+              "tn": 384,
+              "precision": 0.475,
+              "recall": 0.09743589743589744,
+              "false_positive_rate": 0.05185185185185185
+            },
+            "intervention_2fa_or_rejection": {
+              "tp": 195,
+              "fp": 237,
+              "fn": 0,
+              "tn": 168,
+              "precision": 0.4513888888888889,
+              "recall": 1.0,
+              "false_positive_rate": 0.5851851851851851
+            },
+            "changed_decisions": 0,
+            "additional_fraud_interventions": 0,
+            "additional_legitimate_interventions": 0,
+            "additional_fraud_rejections": 0,
+            "additional_legitimate_rejections": 0,
+            "positive_graph_contributions": 64,
+            "mean_added_score": 0.8666666666666667,
+            "decisions": {
+              "two_factor_required": 392,
+              "approved": 168,
+              "rejected": 40
+            }
+          },
+          "weighted_neighbors": {
+            "rejection": {
+              "tp": 19,
+              "fp": 21,
+              "fn": 176,
+              "tn": 384,
+              "precision": 0.475,
+              "recall": 0.09743589743589744,
+              "false_positive_rate": 0.05185185185185185
+            },
+            "intervention_2fa_or_rejection": {
+              "tp": 195,
+              "fp": 237,
+              "fn": 0,
+              "tn": 168,
+              "precision": 0.4513888888888889,
+              "recall": 1.0,
+              "false_positive_rate": 0.5851851851851851
+            },
+            "changed_decisions": 0,
+            "additional_fraud_interventions": 0,
+            "additional_legitimate_interventions": 0,
+            "additional_fraud_rejections": 0,
+            "additional_legitimate_rejections": 0,
+            "positive_graph_contributions": 64,
+            "mean_added_score": 0.32,
+            "decisions": {
+              "two_factor_required": 392,
+              "approved": 168,
+              "rejected": 40
+            }
+          },
+          "weighted_with_repass": {
+            "rejection": {
+              "tp": 19,
+              "fp": 21,
+              "fn": 176,
+              "tn": 384,
+              "precision": 0.475,
+              "recall": 0.09743589743589744,
+              "false_positive_rate": 0.05185185185185185
+            },
+            "intervention_2fa_or_rejection": {
+              "tp": 195,
+              "fp": 237,
+              "fn": 0,
+              "tn": 168,
+              "precision": 0.4513888888888889,
+              "recall": 1.0,
+              "false_positive_rate": 0.5851851851851851
+            },
+            "changed_decisions": 0,
+            "additional_fraud_interventions": 0,
+            "additional_legitimate_interventions": 0,
+            "additional_fraud_rejections": 0,
+            "additional_legitimate_rejections": 0,
+            "positive_graph_contributions": 0,
+            "mean_added_score": 0.0,
+            "decisions": {
+              "two_factor_required": 392,
+              "approved": 168,
+              "rejected": 40
+            }
+          },
+          "existing_gnn": {
+            "rejection": {
+              "tp": 19,
+              "fp": 21,
+              "fn": 176,
+              "tn": 384,
+              "precision": 0.475,
+              "recall": 0.09743589743589744,
+              "false_positive_rate": 0.05185185185185185
+            },
+            "intervention_2fa_or_rejection": {
+              "tp": 195,
+              "fp": 237,
+              "fn": 0,
+              "tn": 168,
+              "precision": 0.4513888888888889,
+              "recall": 1.0,
+              "false_positive_rate": 0.5851851851851851
+            },
+            "changed_decisions": 0,
+            "additional_fraud_interventions": 0,
+            "additional_legitimate_interventions": 0,
+            "additional_fraud_rejections": 0,
+            "additional_legitimate_rejections": 0,
+            "positive_graph_contributions": 89,
+            "mean_added_score": 2.966666666666667,
+            "decisions": {
+              "two_factor_required": 392,
+              "approved": 168,
+              "rejected": 40
+            }
+          }
+        },
+        "by_scenario": {
+          "family": {
+            "baseline": {
+              "decisions": {
+                "two_factor_required": 102,
+                "rejected": 9
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "two_factor_required": 102,
+                "rejected": 9
+              },
+              "positive_graph_contributions": 64
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "two_factor_required": 102,
+                "rejected": 9
+              },
+              "positive_graph_contributions": 64
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "two_factor_required": 102,
+                "rejected": 9
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "two_factor_required": 102,
+                "rejected": 9
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "fan_in": {
+            "baseline": {
+              "decisions": {
+                "two_factor_required": 87,
+                "rejected": 5
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "two_factor_required": 87,
+                "rejected": 5
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "two_factor_required": 87,
+                "rejected": 5
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "two_factor_required": 87,
+                "rejected": 5
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "two_factor_required": 87,
+                "rejected": 5
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "merchant": {
+            "baseline": {
+              "decisions": {
+                "approved": 86,
+                "two_factor_required": 25
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "approved": 86,
+                "two_factor_required": 25
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "approved": 86,
+                "two_factor_required": 25
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "approved": 86,
+                "two_factor_required": 25
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "approved": 86,
+                "two_factor_required": 25
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "new_merchant": {
+            "baseline": {
+              "decisions": {
+                "two_factor_required": 76,
+                "rejected": 11
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "two_factor_required": 76,
+                "rejected": 11
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "two_factor_required": 76,
+                "rejected": 11
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "two_factor_required": 76,
+                "rejected": 11
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "two_factor_required": 76,
+                "rejected": 11
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "normal": {
+            "baseline": {
+              "decisions": {
+                "approved": 82,
+                "two_factor_required": 13,
+                "rejected": 1
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "approved": 82,
+                "two_factor_required": 13,
+                "rejected": 1
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "approved": 82,
+                "two_factor_required": 13,
+                "rejected": 1
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "approved": 82,
+                "two_factor_required": 13,
+                "rejected": 1
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "approved": 82,
+                "two_factor_required": 13,
+                "rejected": 1
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "ring": {
+            "baseline": {
+              "decisions": {
+                "rejected": 14,
+                "two_factor_required": 89
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "rejected": 14,
+                "two_factor_required": 89
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "rejected": 14,
+                "two_factor_required": 89
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "rejected": 14,
+                "two_factor_required": 89
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "rejected": 14,
+                "two_factor_required": 89
+              },
+              "positive_graph_contributions": 89
+            }
+          }
+        },
+        "diagnostics": {
+          "with_suspicious_neighbors": 71,
+          "neighbor_cap_reached": 234,
+          "graph_ms_p50": 0.37676599822589196,
+          "graph_ms_p95": 0.6436770017899107,
+          "max_visited_nodes": 14,
+          "gnn_status": {
+            "scored": 600
+          }
+        }
+      },
+      "test": {
+        "samples": 1200,
+        "fraud_or_mule": 430,
+        "methods": {
+          "baseline": {
+            "rejection": {
+              "tp": 47,
+              "fp": 41,
+              "fn": 383,
+              "tn": 729,
+              "precision": 0.5340909090909091,
+              "recall": 0.10930232558139535,
+              "false_positive_rate": 0.053246753246753244
+            },
+            "intervention_2fa_or_rejection": {
+              "tp": 430,
+              "fp": 439,
+              "fn": 0,
+              "tn": 331,
+              "precision": 0.4948216340621404,
+              "recall": 1.0,
+              "false_positive_rate": 0.5701298701298702
+            },
+            "changed_decisions": 0,
+            "additional_fraud_interventions": 0,
+            "additional_legitimate_interventions": 0,
+            "additional_fraud_rejections": 0,
+            "additional_legitimate_rejections": 0,
+            "positive_graph_contributions": 0,
+            "mean_added_score": 0.0,
+            "decisions": {
+              "approved": 331,
+              "two_factor_required": 781,
+              "rejected": 88
+            }
+          },
+          "count_neighbors": {
+            "rejection": {
+              "tp": 47,
+              "fp": 41,
+              "fn": 383,
+              "tn": 729,
+              "precision": 0.5340909090909091,
+              "recall": 0.10930232558139535,
+              "false_positive_rate": 0.053246753246753244
+            },
+            "intervention_2fa_or_rejection": {
+              "tp": 430,
+              "fp": 439,
+              "fn": 0,
+              "tn": 331,
+              "precision": 0.4948216340621404,
+              "recall": 1.0,
+              "false_positive_rate": 0.5701298701298702
+            },
+            "changed_decisions": 0,
+            "additional_fraud_interventions": 0,
+            "additional_legitimate_interventions": 0,
+            "additional_fraud_rejections": 0,
+            "additional_legitimate_rejections": 0,
+            "positive_graph_contributions": 122,
+            "mean_added_score": 0.7875,
+            "decisions": {
+              "approved": 331,
+              "two_factor_required": 781,
+              "rejected": 88
+            }
+          },
+          "weighted_neighbors": {
+            "rejection": {
+              "tp": 47,
+              "fp": 41,
+              "fn": 383,
+              "tn": 729,
+              "precision": 0.5340909090909091,
+              "recall": 0.10930232558139535,
+              "false_positive_rate": 0.053246753246753244
+            },
+            "intervention_2fa_or_rejection": {
+              "tp": 430,
+              "fp": 439,
+              "fn": 0,
+              "tn": 331,
+              "precision": 0.4948216340621404,
+              "recall": 1.0,
+              "false_positive_rate": 0.5701298701298702
+            },
+            "changed_decisions": 0,
+            "additional_fraud_interventions": 0,
+            "additional_legitimate_interventions": 0,
+            "additional_fraud_rejections": 0,
+            "additional_legitimate_rejections": 0,
+            "positive_graph_contributions": 122,
+            "mean_added_score": 0.3175,
+            "decisions": {
+              "approved": 331,
+              "two_factor_required": 781,
+              "rejected": 88
+            }
+          },
+          "weighted_with_repass": {
+            "rejection": {
+              "tp": 47,
+              "fp": 41,
+              "fn": 383,
+              "tn": 729,
+              "precision": 0.5340909090909091,
+              "recall": 0.10930232558139535,
+              "false_positive_rate": 0.053246753246753244
+            },
+            "intervention_2fa_or_rejection": {
+              "tp": 430,
+              "fp": 439,
+              "fn": 0,
+              "tn": 331,
+              "precision": 0.4948216340621404,
+              "recall": 1.0,
+              "false_positive_rate": 0.5701298701298702
+            },
+            "changed_decisions": 0,
+            "additional_fraud_interventions": 0,
+            "additional_legitimate_interventions": 0,
+            "additional_fraud_rejections": 0,
+            "additional_legitimate_rejections": 0,
+            "positive_graph_contributions": 0,
+            "mean_added_score": 0.0,
+            "decisions": {
+              "approved": 331,
+              "two_factor_required": 781,
+              "rejected": 88
+            }
+          },
+          "existing_gnn": {
+            "rejection": {
+              "tp": 47,
+              "fp": 41,
+              "fn": 383,
+              "tn": 729,
+              "precision": 0.5340909090909091,
+              "recall": 0.10930232558139535,
+              "false_positive_rate": 0.053246753246753244
+            },
+            "intervention_2fa_or_rejection": {
+              "tp": 430,
+              "fp": 439,
+              "fn": 0,
+              "tn": 331,
+              "precision": 0.4948216340621404,
+              "recall": 1.0,
+              "false_positive_rate": 0.5701298701298702
+            },
+            "changed_decisions": 0,
+            "additional_fraud_interventions": 0,
+            "additional_legitimate_interventions": 0,
+            "additional_fraud_rejections": 0,
+            "additional_legitimate_rejections": 0,
+            "positive_graph_contributions": 197,
+            "mean_added_score": 3.283333333333333,
+            "decisions": {
+              "approved": 331,
+              "two_factor_required": 781,
+              "rejected": 88
+            }
+          }
+        },
+        "by_scenario": {
+          "family": {
+            "baseline": {
+              "decisions": {
+                "two_factor_required": 173,
+                "rejected": 14
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "two_factor_required": 173,
+                "rejected": 14
+              },
+              "positive_graph_contributions": 122
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "two_factor_required": 173,
+                "rejected": 14
+              },
+              "positive_graph_contributions": 122
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "two_factor_required": 173,
+                "rejected": 14
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "two_factor_required": 173,
+                "rejected": 14
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "fan_in": {
+            "baseline": {
+              "decisions": {
+                "two_factor_required": 186,
+                "rejected": 26
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "two_factor_required": 186,
+                "rejected": 26
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "two_factor_required": 186,
+                "rejected": 26
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "two_factor_required": 186,
+                "rejected": 26
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "two_factor_required": 186,
+                "rejected": 26
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "merchant": {
+            "baseline": {
+              "decisions": {
+                "approved": 158,
+                "two_factor_required": 30,
+                "rejected": 1
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "approved": 158,
+                "two_factor_required": 30,
+                "rejected": 1
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "approved": 158,
+                "two_factor_required": 30,
+                "rejected": 1
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "approved": 158,
+                "two_factor_required": 30,
+                "rejected": 1
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "approved": 158,
+                "two_factor_required": 30,
+                "rejected": 1
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "new_merchant": {
+            "baseline": {
+              "decisions": {
+                "two_factor_required": 163,
+                "rejected": 25
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "two_factor_required": 163,
+                "rejected": 25
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "two_factor_required": 163,
+                "rejected": 25
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "two_factor_required": 163,
+                "rejected": 25
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "two_factor_required": 163,
+                "rejected": 25
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "normal": {
+            "baseline": {
+              "decisions": {
+                "approved": 173,
+                "two_factor_required": 32,
+                "rejected": 1
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "approved": 173,
+                "two_factor_required": 32,
+                "rejected": 1
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "approved": 173,
+                "two_factor_required": 32,
+                "rejected": 1
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "approved": 173,
+                "two_factor_required": 32,
+                "rejected": 1
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "approved": 173,
+                "two_factor_required": 32,
+                "rejected": 1
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "ring": {
+            "baseline": {
+              "decisions": {
+                "two_factor_required": 197,
+                "rejected": 21
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "two_factor_required": 197,
+                "rejected": 21
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "two_factor_required": 197,
+                "rejected": 21
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "two_factor_required": 197,
+                "rejected": 21
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "two_factor_required": 197,
+                "rejected": 21
+              },
+              "positive_graph_contributions": 197
+            }
+          }
+        },
+        "diagnostics": {
+          "with_suspicious_neighbors": 129,
+          "neighbor_cap_reached": 489,
+          "graph_ms_p50": 0.3790659975493327,
+          "graph_ms_p95": 0.6113739982538391,
+          "max_visited_nodes": 14,
+          "gnn_status": {
+            "scored": 1200
+          }
+        }
+      },
+      "fixed_validation_fpr_score_ranking": {
+        "0.0": {
+          "baseline": {
+            "validation": {
+              "threshold": 101,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            },
+            "test": {
+              "threshold": 101,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            }
+          },
+          "count_neighbors": {
+            "validation": {
+              "threshold": 101,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            },
+            "test": {
+              "threshold": 101,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            }
+          },
+          "weighted_neighbors": {
+            "validation": {
+              "threshold": 101,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            },
+            "test": {
+              "threshold": 101,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            }
+          },
+          "weighted_with_repass": {
+            "validation": {
+              "threshold": 101,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            },
+            "test": {
+              "threshold": 101,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            }
+          },
+          "existing_gnn": {
+            "validation": {
+              "threshold": 101,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            },
+            "test": {
+              "threshold": 101,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            }
+          }
+        },
+        "0.01": {
+          "baseline": {
+            "validation": {
+              "threshold": 101,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            },
+            "test": {
+              "threshold": 101,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            }
+          },
+          "count_neighbors": {
+            "validation": {
+              "threshold": 101,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            },
+            "test": {
+              "threshold": 101,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            }
+          },
+          "weighted_neighbors": {
+            "validation": {
+              "threshold": 101,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            },
+            "test": {
+              "threshold": 101,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            }
+          },
+          "weighted_with_repass": {
+            "validation": {
+              "threshold": 101,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            },
+            "test": {
+              "threshold": 101,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            }
+          },
+          "existing_gnn": {
+            "validation": {
+              "threshold": 101,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            },
+            "test": {
+              "threshold": 101,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            }
+          }
+        },
+        "0.05": {
+          "baseline": {
+            "validation": {
+              "threshold": 96,
+              "tp": 19,
+              "fp": 20,
+              "recall": 0.09743589743589744,
+              "false_positive_rate": 0.04938271604938271,
+              "precision": 0.48717948717948717
+            },
+            "test": {
+              "threshold": 96,
+              "tp": 47,
+              "fp": 39,
+              "recall": 0.10930232558139535,
+              "false_positive_rate": 0.05064935064935065,
+              "precision": 0.5465116279069767
+            }
+          },
+          "count_neighbors": {
+            "validation": {
+              "threshold": 96,
+              "tp": 19,
+              "fp": 20,
+              "recall": 0.09743589743589744,
+              "false_positive_rate": 0.04938271604938271,
+              "precision": 0.48717948717948717
+            },
+            "test": {
+              "threshold": 96,
+              "tp": 47,
+              "fp": 39,
+              "recall": 0.10930232558139535,
+              "false_positive_rate": 0.05064935064935065,
+              "precision": 0.5465116279069767
+            }
+          },
+          "weighted_neighbors": {
+            "validation": {
+              "threshold": 96,
+              "tp": 19,
+              "fp": 20,
+              "recall": 0.09743589743589744,
+              "false_positive_rate": 0.04938271604938271,
+              "precision": 0.48717948717948717
+            },
+            "test": {
+              "threshold": 96,
+              "tp": 47,
+              "fp": 39,
+              "recall": 0.10930232558139535,
+              "false_positive_rate": 0.05064935064935065,
+              "precision": 0.5465116279069767
+            }
+          },
+          "weighted_with_repass": {
+            "validation": {
+              "threshold": 96,
+              "tp": 19,
+              "fp": 20,
+              "recall": 0.09743589743589744,
+              "false_positive_rate": 0.04938271604938271,
+              "precision": 0.48717948717948717
+            },
+            "test": {
+              "threshold": 96,
+              "tp": 47,
+              "fp": 39,
+              "recall": 0.10930232558139535,
+              "false_positive_rate": 0.05064935064935065,
+              "precision": 0.5465116279069767
+            }
+          },
+          "existing_gnn": {
+            "validation": {
+              "threshold": 96,
+              "tp": 19,
+              "fp": 20,
+              "recall": 0.09743589743589744,
+              "false_positive_rate": 0.04938271604938271,
+              "precision": 0.48717948717948717
+            },
+            "test": {
+              "threshold": 96,
+              "tp": 47,
+              "fp": 39,
+              "recall": 0.10930232558139535,
+              "false_positive_rate": 0.05064935064935065,
+              "precision": 0.5465116279069767
+            }
+          }
+        }
+      }
+    },
+    "stress": {
+      "validation": {
+        "samples": 450,
+        "fraud_or_mule": 200,
+        "methods": {
+          "baseline": {
+            "rejection": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 200,
+              "tn": 250,
+              "precision": null,
+              "recall": 0.0,
+              "false_positive_rate": 0.0
+            },
+            "intervention_2fa_or_rejection": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 200,
+              "tn": 250,
+              "precision": null,
+              "recall": 0.0,
+              "false_positive_rate": 0.0
+            },
+            "changed_decisions": 0,
+            "additional_fraud_interventions": 0,
+            "additional_legitimate_interventions": 0,
+            "additional_fraud_rejections": 0,
+            "additional_legitimate_rejections": 0,
+            "positive_graph_contributions": 0,
+            "mean_added_score": 0.0,
+            "decisions": {
+              "approved": 450
+            }
+          },
+          "count_neighbors": {
+            "rejection": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 200,
+              "tn": 250,
+              "precision": null,
+              "recall": 0.0,
+              "false_positive_rate": 0.0
+            },
+            "intervention_2fa_or_rejection": {
+              "tp": 75,
+              "fp": 50,
+              "fn": 125,
+              "tn": 200,
+              "precision": 0.6,
+              "recall": 0.375,
+              "false_positive_rate": 0.2
+            },
+            "changed_decisions": 125,
+            "additional_fraud_interventions": 75,
+            "additional_legitimate_interventions": 50,
+            "additional_fraud_rejections": 0,
+            "additional_legitimate_rejections": 0,
+            "positive_graph_contributions": 250,
+            "mean_added_score": 2.7777777777777777,
+            "decisions": {
+              "approved": 325,
+              "two_factor_required": 125
+            }
+          },
+          "weighted_neighbors": {
+            "rejection": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 200,
+              "tn": 250,
+              "precision": null,
+              "recall": 0.0,
+              "false_positive_rate": 0.0
+            },
+            "intervention_2fa_or_rejection": {
+              "tp": 50,
+              "fp": 25,
+              "fn": 150,
+              "tn": 225,
+              "precision": 0.6666666666666666,
+              "recall": 0.25,
+              "false_positive_rate": 0.1
+            },
+            "changed_decisions": 75,
+            "additional_fraud_interventions": 50,
+            "additional_legitimate_interventions": 25,
+            "additional_fraud_rejections": 0,
+            "additional_legitimate_rejections": 0,
+            "positive_graph_contributions": 250,
+            "mean_added_score": 3.2444444444444445,
+            "decisions": {
+              "approved": 375,
+              "two_factor_required": 75
+            }
+          },
+          "weighted_with_repass": {
+            "rejection": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 200,
+              "tn": 250,
+              "precision": null,
+              "recall": 0.0,
+              "false_positive_rate": 0.0
+            },
+            "intervention_2fa_or_rejection": {
+              "tp": 25,
+              "fp": 0,
+              "fn": 175,
+              "tn": 250,
+              "precision": 1.0,
+              "recall": 0.125,
+              "false_positive_rate": 0.0
+            },
+            "changed_decisions": 25,
+            "additional_fraud_interventions": 25,
+            "additional_legitimate_interventions": 0,
+            "additional_fraud_rejections": 0,
+            "additional_legitimate_rejections": 0,
+            "positive_graph_contributions": 150,
+            "mean_added_score": 1.6888888888888889,
+            "decisions": {
+              "approved": 425,
+              "two_factor_required": 25
+            }
+          },
+          "existing_gnn": {
+            "rejection": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 200,
+              "tn": 250,
+              "precision": null,
+              "recall": 0.0,
+              "false_positive_rate": 0.0
+            },
+            "intervention_2fa_or_rejection": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 200,
+              "tn": 250,
+              "precision": null,
+              "recall": 0.0,
+              "false_positive_rate": 0.0
+            },
+            "changed_decisions": 0,
+            "additional_fraud_interventions": 0,
+            "additional_legitimate_interventions": 0,
+            "additional_fraud_rejections": 0,
+            "additional_legitimate_rejections": 0,
+            "positive_graph_contributions": 0,
+            "mean_added_score": 0.0,
+            "decisions": {
+              "approved": 450
+            }
+          }
+        },
+        "by_scenario": {
+          "innocent_payer": {
+            "baseline": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "approved": 25,
+                "two_factor_required": 25
+              },
+              "positive_graph_contributions": 50
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "approved": 25,
+                "two_factor_required": 25
+              },
+              "positive_graph_contributions": 50
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "merchant": {
+            "baseline": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "merchant_fast_settlement": {
+            "baseline": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "approved": 25,
+                "two_factor_required": 25
+              },
+              "positive_graph_contributions": 50
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 50
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 50
+            },
+            "existing_gnn": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "mule_direct": {
+            "baseline": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "approved": 25,
+                "two_factor_required": 25
+              },
+              "positive_graph_contributions": 50
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 50
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 50
+            },
+            "existing_gnn": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "mule_first_repass": {
+            "baseline": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "approved": 25,
+                "two_factor_required": 25
+              },
+              "positive_graph_contributions": 50
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "approved": 25,
+                "two_factor_required": 25
+              },
+              "positive_graph_contributions": 50
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "mule_no_risky_neighbor": {
+            "baseline": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "mule_two_hops": {
+            "baseline": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "approved": 25,
+                "two_factor_required": 25
+              },
+              "positive_graph_contributions": 50
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "approved": 25,
+                "two_factor_required": 25
+              },
+              "positive_graph_contributions": 50
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "approved": 25,
+                "two_factor_required": 25
+              },
+              "positive_graph_contributions": 50
+            },
+            "existing_gnn": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "normal": {
+            "baseline": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "stale_contact": {
+            "baseline": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "approved": 50
+              },
+              "positive_graph_contributions": 0
+            }
+          }
+        },
+        "diagnostics": {
+          "with_suspicious_neighbors": 250,
+          "neighbor_cap_reached": 50,
+          "graph_ms_p50": 0.43666800047503784,
+          "graph_ms_p95": 0.9227850023307838,
+          "max_visited_nodes": 11,
+          "gnn_status": {
+            "scored": 450
+          }
+        }
+      },
+      "test": {
+        "samples": 900,
+        "fraud_or_mule": 400,
+        "methods": {
+          "baseline": {
+            "rejection": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 400,
+              "tn": 500,
+              "precision": null,
+              "recall": 0.0,
+              "false_positive_rate": 0.0
+            },
+            "intervention_2fa_or_rejection": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 400,
+              "tn": 500,
+              "precision": null,
+              "recall": 0.0,
+              "false_positive_rate": 0.0
+            },
+            "changed_decisions": 0,
+            "additional_fraud_interventions": 0,
+            "additional_legitimate_interventions": 0,
+            "additional_fraud_rejections": 0,
+            "additional_legitimate_rejections": 0,
+            "positive_graph_contributions": 0,
+            "mean_added_score": 0.0,
+            "decisions": {
+              "approved": 900
+            }
+          },
+          "count_neighbors": {
+            "rejection": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 400,
+              "tn": 500,
+              "precision": null,
+              "recall": 0.0,
+              "false_positive_rate": 0.0
+            },
+            "intervention_2fa_or_rejection": {
+              "tp": 150,
+              "fp": 100,
+              "fn": 250,
+              "tn": 400,
+              "precision": 0.6,
+              "recall": 0.375,
+              "false_positive_rate": 0.2
+            },
+            "changed_decisions": 250,
+            "additional_fraud_interventions": 150,
+            "additional_legitimate_interventions": 100,
+            "additional_fraud_rejections": 0,
+            "additional_legitimate_rejections": 0,
+            "positive_graph_contributions": 500,
+            "mean_added_score": 2.7777777777777777,
+            "decisions": {
+              "approved": 650,
+              "two_factor_required": 250
+            }
+          },
+          "weighted_neighbors": {
+            "rejection": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 400,
+              "tn": 500,
+              "precision": null,
+              "recall": 0.0,
+              "false_positive_rate": 0.0
+            },
+            "intervention_2fa_or_rejection": {
+              "tp": 100,
+              "fp": 50,
+              "fn": 300,
+              "tn": 450,
+              "precision": 0.6666666666666666,
+              "recall": 0.25,
+              "false_positive_rate": 0.1
+            },
+            "changed_decisions": 150,
+            "additional_fraud_interventions": 100,
+            "additional_legitimate_interventions": 50,
+            "additional_fraud_rejections": 0,
+            "additional_legitimate_rejections": 0,
+            "positive_graph_contributions": 500,
+            "mean_added_score": 3.261111111111111,
+            "decisions": {
+              "approved": 750,
+              "two_factor_required": 150
+            }
+          },
+          "weighted_with_repass": {
+            "rejection": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 400,
+              "tn": 500,
+              "precision": null,
+              "recall": 0.0,
+              "false_positive_rate": 0.0
+            },
+            "intervention_2fa_or_rejection": {
+              "tp": 50,
+              "fp": 0,
+              "fn": 350,
+              "tn": 500,
+              "precision": 1.0,
+              "recall": 0.125,
+              "false_positive_rate": 0.0
+            },
+            "changed_decisions": 50,
+            "additional_fraud_interventions": 50,
+            "additional_legitimate_interventions": 0,
+            "additional_fraud_rejections": 0,
+            "additional_legitimate_rejections": 0,
+            "positive_graph_contributions": 300,
+            "mean_added_score": 1.7055555555555555,
+            "decisions": {
+              "approved": 850,
+              "two_factor_required": 50
+            }
+          },
+          "existing_gnn": {
+            "rejection": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 400,
+              "tn": 500,
+              "precision": null,
+              "recall": 0.0,
+              "false_positive_rate": 0.0
+            },
+            "intervention_2fa_or_rejection": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 400,
+              "tn": 500,
+              "precision": null,
+              "recall": 0.0,
+              "false_positive_rate": 0.0
+            },
+            "changed_decisions": 0,
+            "additional_fraud_interventions": 0,
+            "additional_legitimate_interventions": 0,
+            "additional_fraud_rejections": 0,
+            "additional_legitimate_rejections": 0,
+            "positive_graph_contributions": 0,
+            "mean_added_score": 0.0,
+            "decisions": {
+              "approved": 900
+            }
+          }
+        },
+        "by_scenario": {
+          "innocent_payer": {
+            "baseline": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "approved": 50,
+                "two_factor_required": 50
+              },
+              "positive_graph_contributions": 100
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "approved": 50,
+                "two_factor_required": 50
+              },
+              "positive_graph_contributions": 100
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "merchant": {
+            "baseline": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "merchant_fast_settlement": {
+            "baseline": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "approved": 50,
+                "two_factor_required": 50
+              },
+              "positive_graph_contributions": 100
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 100
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 100
+            },
+            "existing_gnn": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "mule_direct": {
+            "baseline": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "approved": 50,
+                "two_factor_required": 50
+              },
+              "positive_graph_contributions": 100
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 100
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 100
+            },
+            "existing_gnn": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "mule_first_repass": {
+            "baseline": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "approved": 50,
+                "two_factor_required": 50
+              },
+              "positive_graph_contributions": 100
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "approved": 50,
+                "two_factor_required": 50
+              },
+              "positive_graph_contributions": 100
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "mule_no_risky_neighbor": {
+            "baseline": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "mule_two_hops": {
+            "baseline": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "approved": 50,
+                "two_factor_required": 50
+              },
+              "positive_graph_contributions": 100
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "approved": 50,
+                "two_factor_required": 50
+              },
+              "positive_graph_contributions": 100
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "approved": 50,
+                "two_factor_required": 50
+              },
+              "positive_graph_contributions": 100
+            },
+            "existing_gnn": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "normal": {
+            "baseline": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            }
+          },
+          "stale_contact": {
+            "baseline": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "count_neighbors": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_neighbors": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "weighted_with_repass": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            },
+            "existing_gnn": {
+              "decisions": {
+                "approved": 100
+              },
+              "positive_graph_contributions": 0
+            }
+          }
+        },
+        "diagnostics": {
+          "with_suspicious_neighbors": 500,
+          "neighbor_cap_reached": 100,
+          "graph_ms_p50": 0.4308950010454282,
+          "graph_ms_p95": 0.9867049993772525,
+          "max_visited_nodes": 11,
+          "gnn_status": {
+            "scored": 900
+          }
+        }
+      },
+      "fixed_validation_fpr_score_ranking": {
+        "0.0": {
+          "baseline": {
+            "validation": {
+              "threshold": 26,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            },
+            "test": {
+              "threshold": 26,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            }
+          },
+          "count_neighbors": {
+            "validation": {
+              "threshold": 31,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            },
+            "test": {
+              "threshold": 31,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            }
+          },
+          "weighted_neighbors": {
+            "validation": {
+              "threshold": 35,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            },
+            "test": {
+              "threshold": 35,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            }
+          },
+          "weighted_with_repass": {
+            "validation": {
+              "threshold": 30,
+              "tp": 25,
+              "fp": 0,
+              "recall": 0.125,
+              "false_positive_rate": 0.0,
+              "precision": 1.0
+            },
+            "test": {
+              "threshold": 30,
+              "tp": 50,
+              "fp": 0,
+              "recall": 0.125,
+              "false_positive_rate": 0.0,
+              "precision": 1.0
+            }
+          },
+          "existing_gnn": {
+            "validation": {
+              "threshold": 26,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            },
+            "test": {
+              "threshold": 26,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            }
+          }
+        },
+        "0.01": {
+          "baseline": {
+            "validation": {
+              "threshold": 26,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            },
+            "test": {
+              "threshold": 26,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            }
+          },
+          "count_neighbors": {
+            "validation": {
+              "threshold": 31,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            },
+            "test": {
+              "threshold": 31,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            }
+          },
+          "weighted_neighbors": {
+            "validation": {
+              "threshold": 35,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            },
+            "test": {
+              "threshold": 35,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            }
+          },
+          "weighted_with_repass": {
+            "validation": {
+              "threshold": 30,
+              "tp": 25,
+              "fp": 0,
+              "recall": 0.125,
+              "false_positive_rate": 0.0,
+              "precision": 1.0
+            },
+            "test": {
+              "threshold": 30,
+              "tp": 50,
+              "fp": 0,
+              "recall": 0.125,
+              "false_positive_rate": 0.0,
+              "precision": 1.0
+            }
+          },
+          "existing_gnn": {
+            "validation": {
+              "threshold": 26,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            },
+            "test": {
+              "threshold": 26,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            }
+          }
+        },
+        "0.05": {
+          "baseline": {
+            "validation": {
+              "threshold": 26,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            },
+            "test": {
+              "threshold": 26,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            }
+          },
+          "count_neighbors": {
+            "validation": {
+              "threshold": 31,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            },
+            "test": {
+              "threshold": 31,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            }
+          },
+          "weighted_neighbors": {
+            "validation": {
+              "threshold": 35,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            },
+            "test": {
+              "threshold": 35,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            }
+          },
+          "weighted_with_repass": {
+            "validation": {
+              "threshold": 30,
+              "tp": 25,
+              "fp": 0,
+              "recall": 0.125,
+              "false_positive_rate": 0.0,
+              "precision": 1.0
+            },
+            "test": {
+              "threshold": 30,
+              "tp": 50,
+              "fp": 0,
+              "recall": 0.125,
+              "false_positive_rate": 0.0,
+              "precision": 1.0
+            }
+          },
+          "existing_gnn": {
+            "validation": {
+              "threshold": 26,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            },
+            "test": {
+              "threshold": 26,
+              "tp": 0,
+              "fp": 0,
+              "recall": 0.0,
+              "false_positive_rate": 0.0,
+              "precision": null
+            }
+          }
+        }
+      }
+    }
+  },
+  "source_sha256": {
+    "/app/scripts/evaluate_graph_untrust.py": "1728e002f62a80bfbb1bc4062c1ae3667ae2b6d4f1dcbe9b4bccde335e9191ad",
+    "config/risk-policy.json": "fc0bf27d5a3d7771ebd0cc6c2e7f484d4ab5b573e634aae313a05e46d39c7b9b",
+    "src/gnn/synthetic.py": "22bb1544cec1f84d9895fadcde24a859795a96187cb0a30ec2a68e06f43b5bc6",
+    "src/controllers/decision_engine.py": "1b888e6ee914c6e7a5f4c915a93d1babb1181117d25123f715a04bde53363919",
+    "src/controllers/account_untrust.py": "76d1739e8a55415566b455512fbb6f858e0ecedfaf15e9d64efda9cfb3c2ecab",
+    "models/gnn-synthetic-v1.json": "e87cdbc048455cf00360bd568601ce6819efab002a1c4b779da285dcd5a7540c"
+  }
+}

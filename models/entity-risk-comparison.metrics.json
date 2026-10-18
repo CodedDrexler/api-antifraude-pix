@@ -1,0 +1,211 @@
+{
+  "scope": "SYNTHETIC behavioral contract comparison; not fraud precision/recall or real-world validation",
+  "cases": 14,
+  "all_expected_behaviors_verified": true,
+  "results": [
+    {
+      "scenario": "clean_cpf_ten_confirmed_companies",
+      "baseline_status": "approved",
+      "contribute_status": "two_factor_required",
+      "baseline_score": 0,
+      "score": 20,
+      "own_entity_untrust": 0,
+      "related_exposure": 100,
+      "independent_incidents": 10,
+      "proposed_action": "two_factor_required",
+      "shadow_preserved": true
+    },
+    {
+      "scenario": "new_cnpj_same_controller",
+      "baseline_status": "approved",
+      "contribute_status": "two_factor_required",
+      "baseline_score": 0,
+      "score": 20,
+      "own_entity_untrust": 0,
+      "related_exposure": 100,
+      "independent_incidents": 10,
+      "proposed_action": "two_factor_required",
+      "shadow_preserved": true
+    },
+    {
+      "scenario": "accountant_ten_companies",
+      "baseline_status": "approved",
+      "contribute_status": "approved",
+      "baseline_score": 0,
+      "score": 0,
+      "own_entity_untrust": 0,
+      "related_exposure": 0,
+      "independent_incidents": 0,
+      "proposed_action": "none",
+      "shadow_preserved": true
+    },
+    {
+      "scenario": "minority_ten_companies",
+      "baseline_status": "approved",
+      "contribute_status": "approved",
+      "baseline_score": 0,
+      "score": 4,
+      "own_entity_untrust": 0,
+      "related_exposure": 18.0,
+      "independent_incidents": 10,
+      "proposed_action": "none",
+      "shadow_preserved": true
+    },
+    {
+      "scenario": "administrator_ten_companies",
+      "baseline_status": "approved",
+      "contribute_status": "approved",
+      "baseline_score": 0,
+      "score": 9,
+      "own_entity_untrust": 0,
+      "related_exposure": 45.0,
+      "independent_incidents": 10,
+      "proposed_action": "none",
+      "shadow_preserved": true
+    },
+    {
+      "scenario": "same_incident_ten_companies",
+      "baseline_status": "approved",
+      "contribute_status": "approved",
+      "baseline_score": 0,
+      "score": 18,
+      "own_entity_untrust": 0,
+      "related_exposure": 90.0,
+      "independent_incidents": 1,
+      "proposed_action": "none",
+      "shadow_preserved": true
+    },
+    {
+      "scenario": "former_controller",
+      "baseline_status": "approved",
+      "contribute_status": "approved",
+      "baseline_score": 0,
+      "score": 0,
+      "own_entity_untrust": 0,
+      "related_exposure": 0,
+      "independent_incidents": 0,
+      "proposed_action": "none",
+      "shadow_preserved": true
+    },
+    {
+      "scenario": "joined_after_fraud",
+      "baseline_status": "approved",
+      "contribute_status": "approved",
+      "baseline_score": 0,
+      "score": 0,
+      "own_entity_untrust": 0,
+      "related_exposure": 0,
+      "independent_incidents": 0,
+      "proposed_action": "none",
+      "shadow_preserved": true
+    },
+    {
+      "scenario": "revoked_incidents",
+      "baseline_status": "approved",
+      "contribute_status": "approved",
+      "baseline_score": 0,
+      "score": 0,
+      "own_entity_untrust": 0,
+      "related_exposure": 0,
+      "independent_incidents": 0,
+      "proposed_action": "none",
+      "shadow_preserved": true
+    },
+    {
+      "scenario": "future_discovered_fraud",
+      "baseline_status": "approved",
+      "contribute_status": "approved",
+      "baseline_score": 0,
+      "score": 0,
+      "own_entity_untrust": 0,
+      "related_exposure": 0,
+      "independent_incidents": 0,
+      "proposed_action": "none",
+      "shadow_preserved": true
+    },
+    {
+      "scenario": "new_account_same_cpf_own_history",
+      "baseline_status": "approved",
+      "contribute_status": "two_factor_required",
+      "baseline_score": 0,
+      "score": 0,
+      "own_entity_untrust": 40,
+      "related_exposure": 0,
+      "independent_incidents": 0,
+      "proposed_action": "two_factor_required",
+      "shadow_preserved": true
+    },
+    {
+      "scenario": "expired_own_history",
+      "baseline_status": "approved",
+      "contribute_status": "approved",
+      "baseline_score": 0,
+      "score": 0,
+      "own_entity_untrust": 0,
+      "related_exposure": 0,
+      "independent_incidents": 0,
+      "proposed_action": "none",
+      "shadow_preserved": true
+    },
+    {
+      "scenario": "missing_registry",
+      "baseline_status": "approved",
+      "contribute_status": "approved",
+      "baseline_score": 0,
+      "score": 0,
+      "own_entity_untrust": 0,
+      "related_exposure": 0,
+      "independent_incidents": 0,
+      "proposed_action": "none",
+      "shadow_preserved": true
+    },
+    {
+      "scenario": "fifty_clean_companies_do_not_dilute_one_risk",
+      "baseline_status": "approved",
+      "contribute_status": "approved",
+      "baseline_score": 0,
+      "score": 18,
+      "own_entity_untrust": 0,
+      "related_exposure": 90.0,
+      "independent_incidents": 1,
+      "proposed_action": "none",
+      "shadow_preserved": true
+    }
+  ],
+  "financial_max_vs_mean_example": {
+    "previous_mean_if_used": 9,
+    "new_features": {
+      "status": "assessed",
+      "data_basis": "non_rejected_attempts_not_confirmed_settlement",
+      "score_contribution": 0,
+      "window_hours": 24,
+      "contacts_per_direction": 10,
+      "incoming": {
+        "contacts": 0,
+        "unknown_untrust_contacts": 0,
+        "max_untrust": null,
+        "top_untrust": [],
+        "suspect_fraction": 0
+      },
+      "outgoing": {
+        "contacts": 10,
+        "unknown_untrust_contacts": 0,
+        "max_untrust": 90,
+        "top_untrust": [
+          90,
+          0,
+          0
+        ],
+        "suspect_fraction": 0.1
+      },
+      "rapid_repass_pairs": 0,
+      "repass_with_suspect_destination": false
+    }
+  },
+  "limits": [
+    "Trusted operator registry, no Receita/DICT integration",
+    "Relationship action requests 2FA; bounded graph points still follow the existing score rejection policy",
+    "Financial features are observational because settlement is unknown",
+    "Default API mode is shadow; contribute behavior shown explicitly"
+  ]
+}

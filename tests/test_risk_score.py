@@ -1,16 +1,33 @@
 """Observable scoring behavior through HTTP with isolated registered histories."""
 
+from dataclasses import asdict
 from datetime import datetime, timedelta
+from pathlib import Path
+from uuid import UUID
 
-from conftest import new_transaction
-from test_pix import post, seed_profile
+from conftest import new_transaction, post, seed_profile
+
+from src.constants import Policy
+
+CONFIGURED_POLICY = asdict(
+    Policy.from_file(str(Path(__file__).resolve().parents[1] / "config/risk-policy.json"))
+)
 
 
 def score(api, payload):
     decision = post(api, payload)
     m = decision["metadata"]
     assert type(m["risk_score"]) is int and 0 <= m["risk_score"] <= 100
-    assert m["policy"]["version"] == "pix-score-v6"
+    assert m["policy"]["version"] == "pix-score-v8"
+    assert {
+        key: value for key, value in m["policy"].items() if key not in {"gnn", "gnn_v2", "entity_risk"}
+    } == CONFIGURED_POLICY
+    assert m["policy"]["gnn"]["mode"] == "shadow"
+    assert m["gnn"]["applied_points"] == 0
+    assert m["policy"]["gnn_v2"]["mode"] == "shadow"
+    assert m["gnn_v2"]["applied_points"] == 0
+    assert m["policy"]["entity_risk"]["mode"] == "shadow"
+    assert m["entity_risk"]["applied_points"] == 0
     assert m["score_semantics"] == "heuristic_not_probability"
     assert sum(rule["weight"] for rule in m["triggered_rules"]) == m["raw_score"]
     assert sum(f["score"] for f in m["risk_factors"]) == m["risk_factors_sum"]
@@ -26,20 +43,30 @@ def score(api, payload):
 
 
 def test_first_pix_requests_two_factor_and_saves_explanation(api, payload):
+    payload["amount"] = 1  # Smallest valid cent amount still requires the initial challenge.
     decision = score(api, payload)
     assert decision["metadata"]["risk_score"] == 30
     assert decision["status"] == "two_factor_required"
     assert decision["metadata"]["decision_source"] == "first_transaction"
-    assert api("GET", "/pix/transaction/" + payload["id"])[1] == decision
+    status, saved, headers = api("GET", "/pix/transaction/" + payload["id"])
+    assert status == 200
+    assert saved == decision
+    UUID(headers["X-Request-ID"])
     assert post(api, payload) == decision
 
 
-def test_normal_value_after_first_registration_has_zero_score(api, payload):
-    seed_profile(api, payload, 1)
+def test_approved_history_makes_device_and_young_destination_familiar(api, payload):
+    at = datetime.fromisoformat(payload["transaction_date"])
+    payload["destination_account"]["opening_date"] = (at - timedelta(days=1)).isoformat()
+    seed_profile(api, payload, 3, amount=20_000)
+    payload["amount"] = 50_000
     decision = score(api, payload)
     assert decision["metadata"]["risk_score"] == 0
     assert decision["metadata"]["risk_factors"] == []
     assert decision["metadata"]["risk_factors_sum"] == 0
+    assert decision["metadata"]["known_device"] is True
+    assert decision["metadata"]["known_destination"] is True
+    assert decision["metadata"]["reasons"] == ["no_rule_triggered"]
     assert decision["status"] == "approved"
 
 
@@ -50,6 +77,8 @@ def test_weak_device_signal_alone_approves(api, payload):
     decision = score(api, payload)
     assert decision["metadata"]["risk_score"] == 20
     assert decision["status"] == "approved"
+    assert decision["metadata"]["reasons"] == ["unfamiliar_device"]
+    assert decision["metadata"]["known_device"] is False
 
 
 def test_two_weak_groups_combine_into_two_factor(api, payload):

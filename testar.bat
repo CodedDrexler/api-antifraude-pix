@@ -5,9 +5,10 @@ if errorlevel 1 exit /b 1
 
 set "TEST_PROJECT=bootcamp-tests-%RANDOM%-%RANDOM%"
 set "DATABASE_URL=postgresql+psycopg2://pix:pix@db:5432/pix"
-set "INTERNAL_TOKEN=local_test_token"
 set "API_PORT=0"
 set "GNN_MODE=shadow"
+set "GNN_V2_MODE=shadow"
+set "ENTITY_RISK_MODE=shadow"
 set "EXIT_CODE=1"
 
 echo Verificando Docker Desktop...

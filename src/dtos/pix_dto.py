@@ -16,7 +16,7 @@ class PixAnalysisDTO(BaseModel):
                         "risk_score": 30,
                         "risk_level": "elevated",
                         "decision_source": "first_transaction",
-                        "policy_version": "pix-score-v6",
+                        "policy_version": "pix-score-v7",
                         "processing_time_ms": 8.412,
                         "risk_factors_sum": 30,
                         "account_untrust": {
@@ -105,6 +105,14 @@ class PixAnalysisDTO(BaseModel):
         )
         if "duplicate_payment" in evidence:
             summary["duplicate_payment"] = evidence["duplicate_payment"]
+        if "decision_causes" in evidence:
+            summary["decision_causes"] = evidence["decision_causes"]
+        if "contextual_trust" in evidence:
+            trust = evidence["contextual_trust"]
+            summary["contextual_trust"] = {
+                key: trust[key]
+                for key in ("applied", "reason", "profile_points_before", "profile_points_after")
+            }
         if evidence.get("hard_limits"):
             summary["hard_limits"] = evidence["hard_limits"]
         if "account_untrust" in evidence:
@@ -120,5 +128,33 @@ class PixAnalysisDTO(BaseModel):
                 key: evidence["gnn"][key]
                 for key in ("mode", "status", "gnn_score", "applied_points")
                 if key in evidence["gnn"]
+            }
+        if evidence.get("gnn_v2", {}).get("mode") not in (None, "off"):
+            summary["gnn_v2"] = {
+                key: evidence["gnn_v2"][key]
+                for key in (
+                    "mode",
+                    "status",
+                    "gnn_score",
+                    "applied_points",
+                    "model_version",
+                    "feature_version",
+                )
+                if key in evidence["gnn_v2"]
+            }
+        if "entity_risk" in evidence:
+            entity = evidence["entity_risk"]
+            summary["entity_risk"] = {
+                "mode": entity["mode"],
+                "status": entity["status"],
+                "registry_status": entity["registry_status"],
+                "relationship_coverage": entity["relationships"]["coverage"],
+                "own_entity_untrust": entity["own_entity"]["score"],
+                "own_history_status": entity["own_entity"]["history_status"],
+                "related_exposure_score": entity["relationships"]["exposure_score"],
+                "confirmed_incidents": entity["relationships"]["confirmed_incidents"],
+                "proposed_action": entity["proposed_action"],
+                "proposed_points": entity["proposed_points"],
+                "applied_points": entity["applied_points"],
             }
         return self.model_copy(update={"metadata": summary})

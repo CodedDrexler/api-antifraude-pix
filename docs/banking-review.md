@@ -35,12 +35,12 @@ do psql; nenhuma senha foi gravada na migração. A troca deve ser concluída an
 de considerar o ambiente restrito. Isso não substitui backups nem trilha externa
 resistente a alterações pelo administrador.
 
-**2. Identidade e transporte.** `INTERNAL-TOKEN` compartilhado e `default_token`
-são conveniências locais. Produção exige TLS com validação, identidade por serviço,
+**2. Identidade e transporte.** A API não exige autenticação por token.
+Produção exige TLS com validação, identidade por serviço,
 credenciais curtas/rotacionáveis e autorização por escopo; mTLS e OAuth podem
 compor essa solução. API key sozinha não é proteção suficiente para dados bancários.
 O contrato pressupõe um único integrador confiável: não há segregação por banco,
-usuário ou tenant. Um token válido pode consultar qualquer análise e seus detalhes.
+usuário ou tenant. Qualquer chamador pode consultar qualquer análise e seus detalhes.
 Não publicar esse serviço como API multicliente sem autorização por objeto.
 
 **3. Evidências reais de confiança e fraude.** `approved` significa apenas decisão

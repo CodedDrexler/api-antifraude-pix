@@ -1,3 +1,5 @@
+"""Weighted contributions, factor caps and reconstruction of the decision evidence."""
+
 import json
 from dataclasses import asdict, replace
 
@@ -15,25 +17,25 @@ def evaluate(payload, scoring, history=None):
     )
 
 
-def test_factor_weight_changes_two_factor_decision_and_is_explained(payload):
+def test_fractional_factor_weight_is_truncated_before_decision_and_explained(payload):
     payload["amount"] = 5000
-    scoring = replace(ScoringPolicy(), factor_weights=replace(FactorWeights(), profile=25))
+    scoring = replace(ScoringPolicy(), factor_weights=replace(FactorWeights(), profile=37))
     status, metadata = evaluate(payload, scoring)
     assert status == "approved"
-    assert metadata["risk_score"] == 20
+    assert metadata["risk_score"] == 29  # 80 * 37% = 29.6; rounding up would incorrectly require 2FA.
     assert next(f for f in metadata["risk_factors"] if f["name"] == "profile") == {
         "name": "profile",
         "label": "Perfil de valores",
         "raw_score": 80,
-        "weighted_score": 20,
-        "score": 20,
+        "weighted_score": 29,
+        "score": 29,
         "cap": 80,
-        "weight": 25,
+        "weight": 37,
         "rules": ["amount_above_customer_profile"],
         "hard_limits": [],
     }
     assert metadata["triggered_rules"][0]["risk_factor"] == "profile"
-    assert metadata["triggered_rules"][0]["weighted_points"] == 20
+    assert metadata["triggered_rules"][0]["weighted_points"] == 29
 
 
 def test_increasing_factor_weights_can_block_a_transaction(payload):
@@ -66,17 +68,47 @@ def test_rule_remapping_changes_factor_cap_and_rejection_guard(payload):
     assert all(r["risk_factor"] == "profile" for r in metadata["triggered_rules"])
 
 
-def test_zero_weight_preserves_hard_rejection_and_audit(payload):
-    payload["amount"] = 3_000_000
-    scoring = replace(ScoringPolicy(), factor_weights=replace(FactorWeights(), profile=0, activity=0))
-    status, metadata = evaluate(payload, scoring)
-    assert status == "rejected"
-    assert metadata["risk_score"] == 0
-    assert metadata["risk_group_count"] == 0
-    assert metadata["decision_source"] == "hard_limit"
-    assert next(f for f in metadata["risk_factors"] if f["name"] == "activity")["hard_limits"] == [
-        "accumulated_amount_above_limit"
-    ]
+@pytest.mark.parametrize(
+    "factor,history_changes,young_destination,raw,points,contributions,expected",
+    [
+        pytest.param(
+            "counterparty",
+            {"known_destination": False},
+            True,
+            30,
+            25,
+            {"new_destination_account": 15, "unfamiliar_destination": 10},
+            "approved",
+            id="counterparty-tie-break-consumes-cap-25",
+        ),
+        pytest.param(
+            "device",
+            {"known_device": False, "device_other_owners": 2, "payer_other_devices": 2},
+            False,
+            70,
+            40,
+            {"shared_device": 30, "multiple_devices": 10, "unfamiliar_device": 0},
+            "two_factor_required",
+            id="three-device-rules-remain-one-factor-capped-at-40",
+        ),
+    ],
+)
+def test_related_rules_share_one_factor_and_reconstruct_capped_score(
+    payload, factor, history_changes, young_destination, raw, points, contributions, expected
+):
+    payload["amount"] = 50_000
+    if young_destination:
+        payload["destination_account"]["opening_date"] = payload["transaction_date"]
+    history = replace(History(0, 0, 3, True, True, 3, 60_000), **history_changes)
+    status, metadata = evaluate(payload, ScoringPolicy(), history)
+    assert status == expected
+    assert metadata["decision_source"] == "risk_score"
+    assert metadata["raw_score"] == raw
+    assert metadata["risk_score"] == metadata["risk_factors_sum"] == points
+    assert metadata["risk_group_count"] == 1
+    assert metadata["group_scores"] == {factor: {"raw_score": raw, "score": points, "cap": points}}
+    assert {rule["code"]: rule["contribution"] for rule in metadata["triggered_rules"]} == contributions
+    assert sum(contributions.values()) == points
 
 
 @pytest.mark.parametrize("value", [-1, 201, True, 0.5, "100"])

@@ -8,7 +8,21 @@ from dataclasses import asdict, dataclass
 
 from src.constants import UntrustPolicy
 
-ELIGIBLE_FACTORS = {"activity", "profile", "device", "counterparty"}
+OWN_EVIDENCE_VERSION = "sender-evidence-v2"
+
+# Eligibility follows the evidence, never its configurable score grouping.
+# Reassigning first-Pix, duplicate or night rules cannot create own-account risk;
+# moving real profile evidence to another group cannot silently erase it either.
+ELIGIBLE_RULES = frozenset(
+    {
+        "velocity_above_limit",
+        "accumulated_amount_above_limit",
+        "amount_above_customer_profile",
+        "unfamiliar_device",
+        "shared_device",
+        "multiple_devices",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -18,14 +32,14 @@ class UntrustHistory:
 
 
 def assess_untrust(status, baseline, history, policy: UntrustPolicy, minimum_transaction_score=30):
-    rules = [r for r in baseline["triggered_rules"] if r["risk_factor"] in ELIGIBLE_FACTORS]
+    rules = [r for r in baseline["triggered_rules"] if r["code"] in ELIGIBLE_RULES]
     eligible = sum(rule["contribution"] for rule in rules)
     increment = 0
     active_block = (
         history.points >= policy.rejection_threshold and history.events >= policy.minimum_rejection_events
     )
     if policy.enabled and not active_block:
-        if baseline["hard_limits"]:
+        if any(rule["hard_limit"] for rule in rules):
             increment = policy.maximum_increment
         elif baseline["risk_score"] >= minimum_transaction_score:
             increment = min(
@@ -48,6 +62,7 @@ def assess_untrust(status, baseline, history, policy: UntrustPolicy, minimum_tra
         action = "two_factor_required"
     result = {
         "label": "Desconfiança acumulada da conta",
+        "evidence_version": OWN_EVIDENCE_VERSION,
         "enabled": policy.enabled,
         "score_before": before,
         "score": after,

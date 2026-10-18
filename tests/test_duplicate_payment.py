@@ -1,13 +1,10 @@
-import os
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import datetime, timedelta
 
 import pytest
-from conftest import new_transaction, request
-from sqlalchemy import create_engine
+from conftest import new_transaction, post, request, seed_profile
 from sqlalchemy.orm import Session
-from test_pix import post, seed_profile
 
 from src.constants import FactorWeights, Policy, ScoringPolicy
 from src.controllers.account_untrust import UntrustHistory, assess_untrust
@@ -113,8 +110,7 @@ def test_duplicate_factor_weight_is_configurable_without_increasing_account_untr
     assert DecisionEngine(disabled).evaluate(transaction, history)[0] == "approved"
 
 
-@pytest.mark.skipif(not os.environ.get("PIX_TEST_DATABASE_URL"), reason="Requires isolated database")
-def test_repository_respects_custom_duplicate_window(api, payload):
+def test_repository_respects_custom_duplicate_window(database_engine, api, payload):
     at = datetime.fromisoformat(payload["transaction_date"])
     post(api, new_transaction(payload, transaction_date=(at - timedelta(seconds=60)).isoformat()))
     transaction = PixTransactionCreate.model_validate(payload)
@@ -122,24 +118,20 @@ def test_repository_respects_custom_duplicate_window(api, payload):
     destination = transaction.destination_account.model_dump(mode="json")
     source.pop("opening_date")
     destination.pop("opening_date")
-    engine = create_engine(os.environ["PIX_TEST_DATABASE_URL"])
-    try:
-        with Session(engine) as session:
-            repository = PixRepository(session)
-            assert repository.history(
-                transaction, fingerprint(destination), Policy(), fingerprint(source)
+    with Session(database_engine) as session:
+        repository = PixRepository(session)
+        assert repository.history(
+            transaction, fingerprint(destination), Policy(), fingerprint(source)
+        ).duplicate_transaction_id
+        assert (
+            repository.history(
+                transaction,
+                fingerprint(destination),
+                replace(Policy(), duplicate_window_seconds=30),
+                fingerprint(source),
             ).duplicate_transaction_id
-            assert (
-                repository.history(
-                    transaction,
-                    fingerprint(destination),
-                    replace(Policy(), duplicate_window_seconds=30),
-                    fingerprint(source),
-                ).duplicate_transaction_id
-                is None
-            )
-    finally:
-        engine.dispose()
+            is None
+        )
 
 
 def test_duplicate_never_overrides_a_hard_rejection(payload):

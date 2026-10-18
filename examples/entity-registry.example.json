@@ -1,0 +1,237 @@
+{
+  "version": "SYNTHETIC-ONLY-ten-companies-v1",
+  "links": [
+    {
+      "link_id": "control-0",
+      "person_or_company": "12345678901",
+      "company": "10000000000199",
+      "role": "controller",
+      "verified": true,
+      "valid_from": "2026-07-19T15:00:00Z",
+      "valid_until": null,
+      "known_at": "2026-07-29T15:00:00Z",
+      "reference": "SYNTHETIC-ONLY-control"
+    },
+    {
+      "link_id": "control-1",
+      "person_or_company": "12345678901",
+      "company": "10000001000199",
+      "role": "controller",
+      "verified": true,
+      "valid_from": "2026-07-19T15:00:00Z",
+      "valid_until": null,
+      "known_at": "2026-07-29T15:00:00Z",
+      "reference": "SYNTHETIC-ONLY-control"
+    },
+    {
+      "link_id": "control-2",
+      "person_or_company": "12345678901",
+      "company": "10000002000199",
+      "role": "controller",
+      "verified": true,
+      "valid_from": "2026-07-19T15:00:00Z",
+      "valid_until": null,
+      "known_at": "2026-07-29T15:00:00Z",
+      "reference": "SYNTHETIC-ONLY-control"
+    },
+    {
+      "link_id": "control-3",
+      "person_or_company": "12345678901",
+      "company": "10000003000199",
+      "role": "controller",
+      "verified": true,
+      "valid_from": "2026-07-19T15:00:00Z",
+      "valid_until": null,
+      "known_at": "2026-07-29T15:00:00Z",
+      "reference": "SYNTHETIC-ONLY-control"
+    },
+    {
+      "link_id": "control-4",
+      "person_or_company": "12345678901",
+      "company": "10000004000199",
+      "role": "controller",
+      "verified": true,
+      "valid_from": "2026-07-19T15:00:00Z",
+      "valid_until": null,
+      "known_at": "2026-07-29T15:00:00Z",
+      "reference": "SYNTHETIC-ONLY-control"
+    },
+    {
+      "link_id": "control-5",
+      "person_or_company": "12345678901",
+      "company": "10000005000199",
+      "role": "controller",
+      "verified": true,
+      "valid_from": "2026-07-19T15:00:00Z",
+      "valid_until": null,
+      "known_at": "2026-07-29T15:00:00Z",
+      "reference": "SYNTHETIC-ONLY-control"
+    },
+    {
+      "link_id": "control-6",
+      "person_or_company": "12345678901",
+      "company": "10000006000199",
+      "role": "controller",
+      "verified": true,
+      "valid_from": "2026-07-19T15:00:00Z",
+      "valid_until": null,
+      "known_at": "2026-07-29T15:00:00Z",
+      "reference": "SYNTHETIC-ONLY-control"
+    },
+    {
+      "link_id": "control-7",
+      "person_or_company": "12345678901",
+      "company": "10000007000199",
+      "role": "controller",
+      "verified": true,
+      "valid_from": "2026-07-19T15:00:00Z",
+      "valid_until": null,
+      "known_at": "2026-07-29T15:00:00Z",
+      "reference": "SYNTHETIC-ONLY-control"
+    },
+    {
+      "link_id": "control-8",
+      "person_or_company": "12345678901",
+      "company": "10000008000199",
+      "role": "controller",
+      "verified": true,
+      "valid_from": "2026-07-19T15:00:00Z",
+      "valid_until": null,
+      "known_at": "2026-07-29T15:00:00Z",
+      "reference": "SYNTHETIC-ONLY-control"
+    },
+    {
+      "link_id": "control-9",
+      "person_or_company": "12345678901",
+      "company": "10000009000199",
+      "role": "controller",
+      "verified": true,
+      "valid_from": "2026-07-19T15:00:00Z",
+      "valid_until": null,
+      "known_at": "2026-07-29T15:00:00Z",
+      "reference": "SYNTHETIC-ONLY-control"
+    }
+  ],
+  "incidents": [
+    {
+      "incident_id": "fraud-0",
+      "documents": [
+        "10000000000199"
+      ],
+      "severity": 90,
+      "occurred_at": "2026-10-15T15:00:00Z",
+      "known_at": "2026-10-16T15:00:00Z",
+      "expires_at": null,
+      "revoked_at": null,
+      "reference": "SYNTHETIC-ONLY-incident"
+    },
+    {
+      "incident_id": "fraud-1",
+      "documents": [
+        "10000001000199"
+      ],
+      "severity": 90,
+      "occurred_at": "2026-10-15T15:00:00Z",
+      "known_at": "2026-10-16T15:00:00Z",
+      "expires_at": null,
+      "revoked_at": null,
+      "reference": "SYNTHETIC-ONLY-incident"
+    },
+    {
+      "incident_id": "fraud-2",
+      "documents": [
+        "10000002000199"
+      ],
+      "severity": 90,
+      "occurred_at": "2026-10-15T15:00:00Z",
+      "known_at": "2026-10-16T15:00:00Z",
+      "expires_at": null,
+      "revoked_at": null,
+      "reference": "SYNTHETIC-ONLY-incident"
+    },
+    {
+      "incident_id": "fraud-3",
+      "documents": [
+        "10000003000199"
+      ],
+      "severity": 90,
+      "occurred_at": "2026-10-15T15:00:00Z",
+      "known_at": "2026-10-16T15:00:00Z",
+      "expires_at": null,
+      "revoked_at": null,
+      "reference": "SYNTHETIC-ONLY-incident"
+    },
+    {
+      "incident_id": "fraud-4",
+      "documents": [
+        "10000004000199"
+      ],
+      "severity": 90,
+      "occurred_at": "2026-10-15T15:00:00Z",
+      "known_at": "2026-10-16T15:00:00Z",
+      "expires_at": null,
+      "revoked_at": null,
+      "reference": "SYNTHETIC-ONLY-incident"
+    },
+    {
+      "incident_id": "fraud-5",
+      "documents": [
+        "10000005000199"
+      ],
+      "severity": 90,
+      "occurred_at": "2026-10-15T15:00:00Z",
+      "known_at": "2026-10-16T15:00:00Z",
+      "expires_at": null,
+      "revoked_at": null,
+      "reference": "SYNTHETIC-ONLY-incident"
+    },
+    {
+      "incident_id": "fraud-6",
+      "documents": [
+        "10000006000199"
+      ],
+      "severity": 90,
+      "occurred_at": "2026-10-15T15:00:00Z",
+      "known_at": "2026-10-16T15:00:00Z",
+      "expires_at": null,
+      "revoked_at": null,
+      "reference": "SYNTHETIC-ONLY-incident"
+    },
+    {
+      "incident_id": "fraud-7",
+      "documents": [
+        "10000007000199"
+      ],
+      "severity": 90,
+      "occurred_at": "2026-10-15T15:00:00Z",
+      "known_at": "2026-10-16T15:00:00Z",
+      "expires_at": null,
+      "revoked_at": null,
+      "reference": "SYNTHETIC-ONLY-incident"
+    },
+    {
+      "incident_id": "fraud-8",
+      "documents": [
+        "10000008000199"
+      ],
+      "severity": 90,
+      "occurred_at": "2026-10-15T15:00:00Z",
+      "known_at": "2026-10-16T15:00:00Z",
+      "expires_at": null,
+      "revoked_at": null,
+      "reference": "SYNTHETIC-ONLY-incident"
+    },
+    {
+      "incident_id": "fraud-9",
+      "documents": [
+        "10000009000199"
+      ],
+      "severity": 90,
+      "occurred_at": "2026-10-15T15:00:00Z",
+      "known_at": "2026-10-16T15:00:00Z",
+      "expires_at": null,
+      "revoked_at": null,
+      "reference": "SYNTHETIC-ONLY-incident"
+    }
+  ]
+}

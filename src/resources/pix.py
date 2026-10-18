@@ -11,7 +11,13 @@ from src.schemas.pix_examples import PIX_REQUEST_EXAMPLES
 
 
 def get_pix_controller(request: Request, session: Session = Depends(get_session)):
-    return PixController(session, request.app.state.policy, request.app.state.graph_service)
+    return PixController(
+        session,
+        request.app.state.policy,
+        request.app.state.graph_service,
+        request.app.state.entity_service,
+        request.app.state.temporal_service,
+    )
 
 
 class PixResource:

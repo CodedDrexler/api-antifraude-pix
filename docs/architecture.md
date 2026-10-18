@@ -6,7 +6,7 @@ Base: [CodedDrexler/bootcamp-qi-tech](https://github.com/CodedDrexler/bootcamp-q
 commit `10465f6af76f571be9928454f9ddfd71c983c2bd`.
 O repositório contém um banco demonstrativo e os exemplos do Base Service.
 Este projeto aproveita seu desenho de camadas, FastAPI, SQLAlchemy, PostgreSQL,
-commit no controller, token interno e erros estruturados para o problema Pix.
+commit no controller e erros estruturados para o problema Pix.
 As funcionalidades bancárias daquela entrega não fazem parte deste serviço.
 
 Materiais lidos:
@@ -25,7 +25,7 @@ Também não existe integração externa no caminho da decisão.
 
 ```text
 src/app.py                     registro explícito das rotas e composição
-src/middlewares/               token, request ID e log
+src/middlewares/               request ID e log
 src/schemas/                   formato e normalização da entrada
 src/resources/                 fronteira HTTP
 src/controllers/               fluxo, agregação do score e commit
@@ -58,13 +58,13 @@ Os diretórios Python usam namespace packages do Python 3.12, sem `__init__.py`.
 O código importa módulos explicitamente; o registro de regras fica em
 `src/risk/registry.py`, sem inicialização implícita de pacotes.
 
-A política atual `pix-score-v6` usa contribuições por regra, tetos por grupo,
+A política atual `pix-score-v8` usa contribuições por regra, tetos por grupo,
 faixas de score e limites fortes explícitos. A [pesquisa e o cálculo completo](risk-scoring.md)
 detalham o racional. O score usa o mesmo retrato de histórico obtido dentro da
 transação protegida pelas travas existentes. Análises antigas mantêm seu conteúdo;
 novos IDs recebem o score salvo em `decision_metadata`, sem mudança de schema SQL.
 
-Na branch `codex/gnn-prototype`, um GraphSAGE experimental adiciona a avaliação
+Um GraphSAGE experimental adiciona a avaliação
 `metadata.gnn`. O padrão shadow preserva a decisão por regras; contribute é uma
 opção explícita para testar até 20 pontos adicionais. Treino, inferência, limites
 de histórico e resultados sintéticos estão em [gnn-prototype.md](gnn-prototype.md).
@@ -114,7 +114,7 @@ Detalhes e evidência de avaliação estão em [account-untrust.md](account-untr
 
 ## Fluxo e concorrência
 
-1. Middleware gera request ID e verifica token antes de qualquer acesso ao banco.
+1. Middleware gera request ID e registra o contexto da requisição.
 2. Schema valida tipos, centavos inteiros, datas com fuso, IP e coordenadas.
 3. Controller solicita travas de transação PostgreSQL por ID do Pix, documento do pagador e aparelho.
 4. Repository busca o ID. Mesmo conteúdo devolve o resultado original; conteúdo diferente gera 409.
@@ -170,8 +170,8 @@ a resposta anterior. Os logs JSON têm método, rota parametrizada, status, dura
 e request ID; não incluem payload, token, documento, IP nem o ID do Pix na URL.
 O header `X-Request-ID` permite correlacionar a resposta com o log.
 
-O token segue o contrato interno da referência. `default_token` é o padrão de
-demonstração no Compose, configurável por ambiente. O banco não publica porta no
+As rotas aceitam requisições sem exigir `INTERNAL-TOKEN`.
+O banco não publica porta no
 host e a API publica somente em loopback. O container da API roda sem root.
 Métricas, rate limiting, TLS, papéis de banco e retenção são evoluções para uma
 operação real, não implementações implícitas nesta entrega.

@@ -1,6 +1,6 @@
 # Política de risco e evidências
 
-Política `pix-score-v6`. Fontes consultadas em 17/10/2026.
+Política `pix-score-v8`. Fontes consultadas em 17/10/2026.
 Os pontos são parâmetros demonstrativos do projeto, sem calibração em fraude real.
 
 ## Decisão
@@ -57,9 +57,16 @@ Os códigos existentes foram preservados para integrações; os nomes legíveis
 explicam os fatores ao usuário. `graph` tem vínculo fixo à regra
 `gnn_relational_pattern` e só contribui no modo optativo `contribute`.
 
+Na v8, o [Cofre de Confiança Contextual](contextual-trust.md) pode zerar somente
+os pontos da anomalia de perfil quando o valor é habitual na relação e há amostra
+suficiente em dias distintos de recebimento. A regra original permanece na auditoria.
+`subject` separa origem, destinatário, relação e transação; `decision_causes`
+registra as evidências da intervenção. Destinatário não alimenta o acumulado próprio.
+
 ## O que cada histórico representa
 
-As consultas por pagador usam o documento normalizado e o tempo do evento.
+As consultas por pagador usam o documento normalizado e o tempo do evento,
+limitadas também aos registros disponíveis no instante de recebimento da análise.
 Eventos futuros ficam fora; timestamps iguais incluem tentativas recebidas antes.
 Repetir um ID não acrescenta observações. Eventos atrasados não alteram decisões salvas.
 

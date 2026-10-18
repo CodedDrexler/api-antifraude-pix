@@ -2,7 +2,6 @@
 
 import argparse
 import json
-import os
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -31,7 +30,6 @@ def main():
             data=json.dumps(body).encode(),
             headers={
                 "Content-Type": "application/json",
-                "INTERNAL-TOKEN": os.environ.get("INTERNAL_TOKEN", "default_token"),
             },
         )
         with urlopen(req, timeout=15) as response:

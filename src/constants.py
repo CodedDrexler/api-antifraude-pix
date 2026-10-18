@@ -124,8 +124,32 @@ class UntrustPolicy:
 
 
 @dataclass(frozen=True)
+class ContextualTrustPolicy:
+    enabled: bool = True
+    history_size: int = 20
+    minimum_payer_samples: int = 5
+    minimum_relationship_samples: int = 3
+    minimum_received_days: int = 2
+    minimum_ratio_percent: int = 50
+    maximum_ratio_percent: int = 200
+
+    def __post_init__(self):
+        if type(self.enabled) is not bool:
+            raise ValueError("contextual_trust.enabled must be a boolean")
+        for name, value in asdict(self).items():
+            if name != "enabled" and (type(value) is not int or value <= 0):
+                raise ValueError(f"contextual_trust.{name} must be a positive integer")
+        if not self.minimum_received_days <= self.minimum_relationship_samples <= self.history_size:
+            raise ValueError("Contextual trust requires days <= relationship samples <= history size")
+        if self.minimum_payer_samples > self.history_size:
+            raise ValueError("Contextual trust payer samples must fit history size")
+        if not self.minimum_ratio_percent <= 100 <= self.maximum_ratio_percent:
+            raise ValueError("Contextual trust compatibility must include the median")
+
+
+@dataclass(frozen=True)
 class Policy:
-    version: str = "pix-score-v6"
+    version: str = "pix-score-v8"
     duplicate_window_seconds: int = 120
     velocity_minutes: int = 10
     velocity_limit: int = 5
@@ -147,6 +171,7 @@ class Policy:
     night_min_history: int = 3
     untrust: UntrustPolicy = field(default_factory=UntrustPolicy)
     scoring: ScoringPolicy = field(default_factory=ScoringPolicy)
+    contextual_trust: ContextualTrustPolicy = field(default_factory=ContextualTrustPolicy)
 
     @classmethod
     def from_file(cls, path: str):
@@ -160,6 +185,9 @@ class Policy:
         untrust = data.pop("untrust", {})
         if not isinstance(untrust, dict):
             raise ValueError("untrust must be a JSON object")
+        contextual_trust = data.pop("contextual_trust", {})
+        if not isinstance(contextual_trust, dict):
+            raise ValueError("contextual_trust must be a JSON object")
         for name, model in (
             ("weights", RuleWeights),
             ("group_caps", GroupCaps),
@@ -171,13 +199,23 @@ class Policy:
                 if not isinstance(values, dict):
                     raise ValueError(f"{name} must be a JSON object")
                 scoring[name] = model(**values)
-        return cls(**data, scoring=ScoringPolicy(**scoring), untrust=UntrustPolicy(**untrust))
+        return cls(
+            **data,
+            scoring=ScoringPolicy(**scoring),
+            untrust=UntrustPolicy(**untrust),
+            contextual_trust=ContextualTrustPolicy(**contextual_trust),
+        )
 
     def __post_init__(self):
         for name, value in asdict(self).items():
-            if name not in {"version", "scoring", "untrust", "night_start_hour", "night_end_hour"} and (
-                type(value) is not int or value <= 0
-            ):
+            if name not in {
+                "version",
+                "scoring",
+                "untrust",
+                "contextual_trust",
+                "night_start_hour",
+                "night_end_hour",
+            } and (type(value) is not int or value <= 0):
                 raise ValueError(f"Policy {name} must be a positive integer")
         if (
             type(self.night_start_hour) is not int
@@ -192,14 +230,10 @@ class Policy:
 @dataclass(frozen=True)
 class Settings:
     database_url: str
-    internal_token: str
 
     @classmethod
     def from_env(cls):
         database_url = os.environ.get("DATABASE_URL", "")
-        internal_token = os.environ.get("INTERNAL_TOKEN", "")
         if not database_url.startswith("postgresql+psycopg2://"):
             raise ValueError("DATABASE_URL must use postgresql+psycopg2://")
-        if not internal_token.strip() or not internal_token.isascii():
-            raise ValueError("INTERNAL_TOKEN must be nonempty ASCII text")
-        return cls(database_url, internal_token)
+        return cls(database_url)

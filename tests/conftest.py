@@ -1,17 +1,19 @@
 import copy
 import json
 import os
+from datetime import datetime, timedelta
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.pool import NullPool
 
 API_URL = os.environ.get("PIX_API_URL", "http://127.0.0.1:8000").rstrip("/")
-TOKEN = os.environ.get("INTERNAL_TOKEN", "default_token")
 
 
-def request(method, path, body=None, token=TOKEN, *, include_details=False):
+def request(method, path, body=None, token=None, *, include_details=False):
     if include_details and path.startswith("/pix/transaction"):
         path += "?include_details=true"
     headers = {"Content-Type": "application/json"}
@@ -31,7 +33,7 @@ def request(method, path, body=None, token=TOKEN, *, include_details=False):
 @pytest.fixture
 def api():
     # Evidence-focused integration tests explicitly inspect the saved audit view.
-    def detailed_request(method, path, body=None, token=TOKEN):
+    def detailed_request(method, path, body=None, token=None):
         return request(method, path, body, token, include_details=True)
 
     return detailed_request
@@ -70,3 +72,36 @@ def new_transaction(payload, **changes):
     result["id"] = "test-" + uuid4().hex
     result.update(changes)
     return result
+
+
+def post(api, payload):
+    status, body, _ = api("POST", "/pix/transaction", payload)
+    assert status == 200, body
+    assert set(body) == {"key", "status", "metadata"}
+    UUID(body["key"])
+    return body
+
+
+def seed_profile(api, payload, count, amount=1000):
+    at = datetime.fromisoformat(payload["transaction_date"])
+    bootstrap = new_transaction(
+        payload, amount=amount, transaction_date=(at - timedelta(hours=count + 1)).isoformat()
+    )
+    assert post(api, bootstrap)["status"] == "two_factor_required"
+    for index in reversed(range(count)):
+        seed = new_transaction(
+            payload, amount=amount, transaction_date=(at - timedelta(hours=index + 1)).isoformat()
+        )
+        assert post(api, seed)["status"] == "approved"
+
+
+@pytest.fixture
+def database_engine():
+    url = os.environ.get("PIX_TEST_DATABASE_URL")
+    if not url:
+        pytest.skip("Requires the isolated verification database")
+    engine = create_engine(url, poolclass=NullPool)
+    try:
+        yield engine
+    finally:
+        engine.dispose()

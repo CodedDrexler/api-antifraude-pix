@@ -1,5 +1,14 @@
 # Experimental GNN
 
+Experimento posterior, separado do modelo da API:
+[grafo v2 com direção, titularidade e tempo](graph-v2-experiment.md).
+Compara o v1 retreinado, um modelo tabular e o v2 em três sementes, incluindo
+casos parecidos com intenções diferentes. O restante deste documento descreve
+o protótipo v1 e suas métricas originais.
+
+Desde 18/10/2026, o v2 também [roda na API em shadow](graph-v2-api.md),
+com evidências próprias em `gnn_v2`. O v1 continua com seu modo independente.
+
 ## Resumo em português
 
 O modelo é um **GraphSAGE supervisionado de duas camadas**, com agregação média

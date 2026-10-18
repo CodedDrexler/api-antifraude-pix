@@ -1,5 +1,6 @@
 """Shared score calculation for rule evidence and the optional GNN factor."""
 
+from src.risk.attribution import RULE_SUBJECTS
 from src.risk.types import RuleMatch
 from src.risk_context import FACTOR_LABELS
 
@@ -7,6 +8,14 @@ from src.risk_context import FACTOR_LABELS
 def rule_evidence(match: RuleMatch, factor: str, weight: int, factor_weight: int) -> dict:
     return {
         "code": match.code,
+        "subject": RULE_SUBJECTS.get(match.code, "transaction"),
+        "source": (
+            "operator_registry"
+            if match.code == "verified_entity_relationship_exposure"
+            else "local_model"
+            if match.code == "gnn_relational_pattern"
+            else "request_and_local_history"
+        ),
         "group": factor,
         "risk_factor": factor,
         "weight": weight,

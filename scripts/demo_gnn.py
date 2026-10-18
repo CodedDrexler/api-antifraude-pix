@@ -2,7 +2,6 @@
 
 import argparse
 import json
-import os
 from urllib.request import Request, urlopen
 from uuid import uuid4
 
@@ -25,7 +24,6 @@ def main():
             data=json.dumps(body).encode(),
             headers={
                 "Content-Type": "application/json",
-                "INTERNAL-TOKEN": os.environ.get("INTERNAL_TOKEN", "default_token"),
             },
         )
         with urlopen(request, timeout=15) as response:

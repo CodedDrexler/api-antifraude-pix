@@ -3,7 +3,6 @@
 import argparse
 import copy
 import json
-import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.request import Request, urlopen
@@ -15,7 +14,6 @@ def main():
     parser.add_argument("--url", default="http://127.0.0.1:8000")
     parser.add_argument("--save-response", type=Path, help="Save the complete rejected response as JSON")
     args = parser.parse_args()
-    token = os.environ.get("INTERNAL_TOKEN", "default_token")
     template = json.loads((Path(__file__).resolve().parents[1] / "examples/pix.json").read_text())
     # A fixed daytime hour keeps these three score examples independent of launch time.
     at = datetime.now(timezone.utc).replace(hour=15, minute=0, second=0, microsecond=0)
@@ -37,7 +35,7 @@ def main():
         request = Request(
             args.url.rstrip("/") + "/pix/transaction",
             data=json.dumps(body).encode(),
-            headers={"Content-Type": "application/json", "INTERNAL-TOKEN": token},
+            headers={"Content-Type": "application/json"},
         )
         with urlopen(request, timeout=15) as response:
             return json.load(response)

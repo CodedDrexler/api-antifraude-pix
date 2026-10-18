@@ -1,0 +1,3181 @@
+{
+  "scope": "SYNTHETIC OFFLINE EXPERIMENT ONLY; no API/policy/model replacement or fraud efficacy claim",
+  "label_target": "Synthetic SOURCE mule intent; never mixed with legacy transaction-intent labels",
+  "policy": {
+    "version": "pix-score-v7",
+    "duplicate_window_seconds": 120,
+    "velocity_minutes": 10,
+    "velocity_limit": 5,
+    "accumulated_amount": 3000000,
+    "new_account_days": 7,
+    "profile_days": 30,
+    "profile_history_size": 10,
+    "profile_multiplier": 5,
+    "profile_min_amount": 50000,
+    "device_min_history": 3,
+    "device_min_amount": 50000,
+    "destination_min_history": 3,
+    "device_window_hours": 24,
+    "device_owner_limit": 3,
+    "payer_device_limit": 3,
+    "night_start_hour": 20,
+    "night_end_hour": 6,
+    "night_min_amount": 50000,
+    "night_min_history": 3,
+    "untrust": {
+      "enabled": true,
+      "rejection_enabled": false,
+      "window_hours": 24,
+      "two_factor_threshold": 40,
+      "notification_threshold": 60,
+      "rejection_threshold": 80,
+      "maximum_increment": 25,
+      "score_divisor": 4,
+      "minimum_rejection_events": 4
+    },
+    "scoring": {
+      "two_factor_threshold": 30,
+      "rejection_threshold": 80,
+      "minimum_rejection_groups": 2,
+      "weights": {
+        "velocity_above_limit": 80,
+        "accumulated_amount_above_limit": 80,
+        "first_transaction": 30,
+        "new_source_account": 15,
+        "new_destination_account": 15,
+        "unfamiliar_destination": 15,
+        "amount_above_customer_profile": 80,
+        "unfamiliar_device": 20,
+        "shared_device": 30,
+        "multiple_devices": 20,
+        "unusual_night_app": 15,
+        "insufficient_amount_history": 30,
+        "possible_duplicate_payment": 30
+      },
+      "group_caps": {
+        "exposure": 80,
+        "activity": 80,
+        "account": 15,
+        "counterparty": 25,
+        "profile": 80,
+        "device": 40,
+        "access_context": 15,
+        "duplication": 30
+      },
+      "factor_weights": {
+        "exposure": 100,
+        "activity": 100,
+        "account": 100,
+        "counterparty": 100,
+        "profile": 100,
+        "device": 100,
+        "graph": 100,
+        "access_context": 100,
+        "duplication": 100
+      },
+      "rule_factors": {
+        "velocity_above_limit": "activity",
+        "accumulated_amount_above_limit": "activity",
+        "first_transaction": "exposure",
+        "new_source_account": "account",
+        "new_destination_account": "counterparty",
+        "unfamiliar_destination": "counterparty",
+        "amount_above_customer_profile": "profile",
+        "unfamiliar_device": "device",
+        "shared_device": "device",
+        "multiple_devices": "device",
+        "unusual_night_app": "access_context",
+        "insufficient_amount_history": "exposure",
+        "possible_duplicate_payment": "duplication"
+      }
+    }
+  },
+  "feature_version": "pix-directed-temporal-v2",
+  "design": {
+    "months": [
+      1,
+      5,
+      9
+    ],
+    "seeds": [
+      42,
+      43,
+      44
+    ],
+    "samples": {
+      "train": 440,
+      "validation": 220,
+      "test": 440
+    },
+    "kinds": [
+      "mule_direct",
+      "mule_two_hops",
+      "mule_no_risky_neighbor",
+      "mule_first_repass",
+      "innocent_payer",
+      "merchant",
+      "merchant_fast_settlement",
+      "normal",
+      "stale_contact",
+      "temporal_fast",
+      "temporal_slow"
+    ],
+    "threshold_budgets": [
+      0,
+      0.01,
+      0.05
+    ],
+    "selection": "Best epoch by validation BCE; threshold by validation FPR; three predeclared seeds, no winner chosen on test",
+    "neighborhood": "Both models receive the same full supplied synthetic history, max 300 events; broader than current API's one-neighborhood query",
+    "evidence": "Rule-only independent untrust; simulated chronological receipt time; non-rejected attempts are not settled payments",
+    "comparison": "Frozen v1 has old transaction-intent training; retrained v1, v2 tabular and v2 graph share source-intent training data",
+    "limits": "Same artificial generator across splits, no confirmed outcomes, no delayed/out-of-order receipt simulation, no production calibration",
+    "development": "Exploratory experiment; all budgets and seeds are reported, no untouched confirmatory holdout claim"
+  },
+  "frozen_v1": {
+    "0.0": {
+      "validation": {
+        "threshold": 0.005855190271205109,
+        "precision": 0.0,
+        "recall": 0.0,
+        "false_positive_rate": 0.0,
+        "f1": 0.0,
+        "roc_auc": 0.38475,
+        "true_positive": 0,
+        "false_positive": 0,
+        "true_negative": 120,
+        "false_negative": 100
+      },
+      "test": {
+        "threshold": 0.005855190271205109,
+        "precision": 0.0,
+        "recall": 0.0,
+        "false_positive_rate": 0.004166666666666667,
+        "f1": 0.0,
+        "roc_auc": 0.3688958333333333,
+        "true_positive": 0,
+        "false_positive": 1,
+        "true_negative": 239,
+        "false_negative": 200
+      },
+      "policy_with_20_point_cap": {
+        "interventions": {
+          "approved": 439,
+          "two_factor_required": 1
+        },
+        "fraud_interventions": 0,
+        "legitimate_interventions": 1,
+        "additional_fraud_interventions": 0,
+        "additional_legitimate_interventions": 1,
+        "additional_legitimate_rejections": 0,
+        "positives": 200,
+        "negatives": 240
+      },
+      "by_scenario": {
+        "mule_direct": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 4.961014887814731e-06
+        },
+        "mule_two_hops": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 5.392491059158328e-06
+        },
+        "mule_no_risky_neighbor": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 6.582319994198519e-06
+        },
+        "mule_first_repass": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 6.572057249883965e-05
+        },
+        "innocent_payer": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 0.004368699148406265
+        },
+        "merchant": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 7.223602331764461e-10
+        },
+        "merchant_fast_settlement": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 6.413094128065977e-06
+        },
+        "normal": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 0.0013718926140960034
+        },
+        "stale_contact": {
+          "samples": 40,
+          "flagged": 1,
+          "mean_score": 0.0044222181029472014
+        },
+        "temporal_fast": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 4.961015698112485e-06
+        },
+        "temporal_slow": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 4.961015698112485e-06
+        }
+      }
+    },
+    "0.01": {
+      "validation": {
+        "threshold": 0.005855190271205109,
+        "precision": 0.0,
+        "recall": 0.0,
+        "false_positive_rate": 0.0,
+        "f1": 0.0,
+        "roc_auc": 0.38475,
+        "true_positive": 0,
+        "false_positive": 0,
+        "true_negative": 120,
+        "false_negative": 100
+      },
+      "test": {
+        "threshold": 0.005855190271205109,
+        "precision": 0.0,
+        "recall": 0.0,
+        "false_positive_rate": 0.004166666666666667,
+        "f1": 0.0,
+        "roc_auc": 0.3688958333333333,
+        "true_positive": 0,
+        "false_positive": 1,
+        "true_negative": 239,
+        "false_negative": 200
+      },
+      "policy_with_20_point_cap": {
+        "interventions": {
+          "approved": 439,
+          "two_factor_required": 1
+        },
+        "fraud_interventions": 0,
+        "legitimate_interventions": 1,
+        "additional_fraud_interventions": 0,
+        "additional_legitimate_interventions": 1,
+        "additional_legitimate_rejections": 0,
+        "positives": 200,
+        "negatives": 240
+      },
+      "by_scenario": {
+        "mule_direct": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 4.961014887814731e-06
+        },
+        "mule_two_hops": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 5.392491059158328e-06
+        },
+        "mule_no_risky_neighbor": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 6.582319994198519e-06
+        },
+        "mule_first_repass": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 6.572057249883965e-05
+        },
+        "innocent_payer": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 0.004368699148406265
+        },
+        "merchant": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 7.223602331764461e-10
+        },
+        "merchant_fast_settlement": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 6.413094128065977e-06
+        },
+        "normal": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 0.0013718926140960034
+        },
+        "stale_contact": {
+          "samples": 40,
+          "flagged": 1,
+          "mean_score": 0.0044222181029472014
+        },
+        "temporal_fast": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 4.961015698112485e-06
+        },
+        "temporal_slow": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 4.961015698112485e-06
+        }
+      }
+    },
+    "0.05": {
+      "validation": {
+        "threshold": 0.005855190271205109,
+        "precision": 0.0,
+        "recall": 0.0,
+        "false_positive_rate": 0.0,
+        "f1": 0.0,
+        "roc_auc": 0.38475,
+        "true_positive": 0,
+        "false_positive": 0,
+        "true_negative": 120,
+        "false_negative": 100
+      },
+      "test": {
+        "threshold": 0.005855190271205109,
+        "precision": 0.0,
+        "recall": 0.0,
+        "false_positive_rate": 0.004166666666666667,
+        "f1": 0.0,
+        "roc_auc": 0.3688958333333333,
+        "true_positive": 0,
+        "false_positive": 1,
+        "true_negative": 239,
+        "false_negative": 200
+      },
+      "policy_with_20_point_cap": {
+        "interventions": {
+          "approved": 439,
+          "two_factor_required": 1
+        },
+        "fraud_interventions": 0,
+        "legitimate_interventions": 1,
+        "additional_fraud_interventions": 0,
+        "additional_legitimate_interventions": 1,
+        "additional_legitimate_rejections": 0,
+        "positives": 200,
+        "negatives": 240
+      },
+      "by_scenario": {
+        "mule_direct": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 4.961014887814731e-06
+        },
+        "mule_two_hops": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 5.392491059158328e-06
+        },
+        "mule_no_risky_neighbor": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 6.582319994198519e-06
+        },
+        "mule_first_repass": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 6.572057249883965e-05
+        },
+        "innocent_payer": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 0.004368699148406265
+        },
+        "merchant": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 7.223602331764461e-10
+        },
+        "merchant_fast_settlement": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 6.413094128065977e-06
+        },
+        "normal": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 0.0013718926140960034
+        },
+        "stale_contact": {
+          "samples": 40,
+          "flagged": 1,
+          "mean_score": 0.0044222181029472014
+        },
+        "temporal_fast": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 4.961015698112485e-06
+        },
+        "temporal_slow": {
+          "samples": 40,
+          "flagged": 0,
+          "mean_score": 4.961015698112485e-06
+        }
+      }
+    }
+  },
+  "frozen_v1_at_original_runtime_0_8": {
+    "test": {
+      "threshold": 0.8,
+      "precision": 0.0,
+      "recall": 0.0,
+      "false_positive_rate": 0.0,
+      "f1": 0.0,
+      "roc_auc": 0.3688958333333333,
+      "true_positive": 0,
+      "false_positive": 0,
+      "true_negative": 240,
+      "false_negative": 200
+    },
+    "policy_with_20_point_cap": {
+      "interventions": {
+        "approved": 440
+      },
+      "fraud_interventions": 0,
+      "legitimate_interventions": 0,
+      "additional_fraud_interventions": 0,
+      "additional_legitimate_interventions": 0,
+      "additional_legitimate_rejections": 0,
+      "positives": 200,
+      "negatives": 240
+    }
+  },
+  "baseline": {
+    "interventions": {
+      "approved": 440
+    },
+    "fraud_interventions": 0,
+    "legitimate_interventions": 0,
+    "additional_fraud_interventions": 0,
+    "additional_legitimate_interventions": 0,
+    "additional_legitimate_rejections": 0,
+    "positives": 200,
+    "negatives": 240
+  },
+  "runs": [
+    {
+      "seed": 42,
+      "method": "v1_retrained",
+      "training": {
+        "best_epoch": 100,
+        "validation_loss": 0.2976701557636261,
+        "initial_training_loss": 0.6908570528030396,
+        "final_training_loss": 0.2995457649230957
+      },
+      "comparison": {
+        "0.0": {
+          "validation": {
+            "threshold": 0.7699612975120544,
+            "precision": 1.0,
+            "recall": 0.6,
+            "false_positive_rate": 0.0,
+            "f1": 0.7499999999999999,
+            "roc_auc": 0.9326666666666666,
+            "true_positive": 60,
+            "false_positive": 0,
+            "true_negative": 120,
+            "false_negative": 40
+          },
+          "test": {
+            "threshold": 0.7699612975120544,
+            "precision": 1.0,
+            "recall": 0.585,
+            "false_positive_rate": 0.0,
+            "f1": 0.7381703470031545,
+            "roc_auc": 0.9261458333333333,
+            "true_positive": 117,
+            "false_positive": 0,
+            "true_negative": 240,
+            "false_negative": 83
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 383,
+              "two_factor_required": 57
+            },
+            "fraud_interventions": 57,
+            "legitimate_interventions": 0,
+            "additional_fraud_interventions": 57,
+            "additional_legitimate_interventions": 0,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.577005998045206
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 37,
+              "mean_score": 0.8521450281143188
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9635209366679192
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8371256276965141
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 2.566612115515454e-05
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 1.4169368238725611e-07
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.6069515950977802
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.004192172136390582
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 1.9911521485482807e-05
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.57700599655509
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.57700599655509
+            }
+          }
+        },
+        "0.01": {
+          "validation": {
+            "threshold": 0.7137246131896973,
+            "precision": 0.9838709677419355,
+            "recall": 0.61,
+            "false_positive_rate": 0.008333333333333333,
+            "f1": 0.7530864197530864,
+            "roc_auc": 0.9326666666666666,
+            "true_positive": 61,
+            "false_positive": 1,
+            "true_negative": 119,
+            "false_negative": 39
+          },
+          "test": {
+            "threshold": 0.7137246131896973,
+            "precision": 0.9545454545454546,
+            "recall": 0.63,
+            "false_positive_rate": 0.025,
+            "f1": 0.7590361445783134,
+            "roc_auc": 0.9261458333333333,
+            "true_positive": 126,
+            "false_positive": 6,
+            "true_negative": 234,
+            "false_negative": 74
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 368,
+              "two_factor_required": 72
+            },
+            "fraud_interventions": 66,
+            "legitimate_interventions": 6,
+            "additional_fraud_interventions": 66,
+            "additional_legitimate_interventions": 6,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 3,
+              "mean_score": 0.577005998045206
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8521450281143188
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9635209366679192
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8371256276965141
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 2.566612115515454e-05
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 1.4169368238725611e-07
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 3,
+              "mean_score": 0.6069515950977802
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.004192172136390582
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 1.9911521485482807e-05
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 3,
+              "mean_score": 0.57700599655509
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 3,
+              "mean_score": 0.57700599655509
+            }
+          }
+        },
+        "0.05": {
+          "validation": {
+            "threshold": 0.7063502073287964,
+            "precision": 0.9142857142857143,
+            "recall": 0.64,
+            "false_positive_rate": 0.05,
+            "f1": 0.7529411764705883,
+            "roc_auc": 0.9326666666666666,
+            "true_positive": 64,
+            "false_positive": 6,
+            "true_negative": 114,
+            "false_negative": 36
+          },
+          "test": {
+            "threshold": 0.7063502073287964,
+            "precision": 0.9402985074626866,
+            "recall": 0.63,
+            "false_positive_rate": 0.03333333333333333,
+            "f1": 0.7544910179640718,
+            "roc_auc": 0.9261458333333333,
+            "true_positive": 126,
+            "false_positive": 8,
+            "true_negative": 232,
+            "false_negative": 74
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 367,
+              "two_factor_required": 73
+            },
+            "fraud_interventions": 66,
+            "legitimate_interventions": 7,
+            "additional_fraud_interventions": 66,
+            "additional_legitimate_interventions": 7,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 3,
+              "mean_score": 0.577005998045206
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8521450281143188
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9635209366679192
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8371256276965141
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 2.566612115515454e-05
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 1.4169368238725611e-07
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 5,
+              "mean_score": 0.6069515950977802
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.004192172136390582
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 1.9911521485482807e-05
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 3,
+              "mean_score": 0.57700599655509
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 3,
+              "mean_score": 0.57700599655509
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed": 42,
+      "method": "v2_tabular",
+      "training": {
+        "best_epoch": 100,
+        "validation_loss": 0.22429540753364563,
+        "initial_training_loss": 0.7039620876312256,
+        "final_training_loss": 0.22395525872707367
+      },
+      "comparison": {
+        "0.0": {
+          "validation": {
+            "threshold": 0.80586838722229,
+            "precision": 1.0,
+            "recall": 0.52,
+            "false_positive_rate": 0.0,
+            "f1": 0.6842105263157895,
+            "roc_auc": 0.9483333333333334,
+            "true_positive": 52,
+            "false_positive": 0,
+            "true_negative": 120,
+            "false_negative": 48
+          },
+          "test": {
+            "threshold": 0.80586838722229,
+            "precision": 0.9900990099009901,
+            "recall": 0.5,
+            "false_positive_rate": 0.004166666666666667,
+            "f1": 0.6644518272425249,
+            "roc_auc": 0.9492291666666667,
+            "true_positive": 100,
+            "false_positive": 1,
+            "true_negative": 239,
+            "false_negative": 100
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 399,
+              "two_factor_required": 41
+            },
+            "fraud_interventions": 40,
+            "legitimate_interventions": 1,
+            "additional_fraud_interventions": 40,
+            "additional_legitimate_interventions": 1,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.7884202301502228
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9056229814887047
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.905912509560585
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.7793681278824807
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.00032792581332614646
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.00033354870392940936
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 1,
+              "mean_score": 0.7891577035188675
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.004153929895255715
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.005010040069464594
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 20,
+              "mean_score": 0.8123038724064827
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0009400314622325823
+            }
+          }
+        },
+        "0.01": {
+          "validation": {
+            "threshold": 0.8057340383529663,
+            "precision": 0.9814814814814815,
+            "recall": 0.53,
+            "false_positive_rate": 0.008333333333333333,
+            "f1": 0.6883116883116882,
+            "roc_auc": 0.9483333333333334,
+            "true_positive": 53,
+            "false_positive": 1,
+            "true_negative": 119,
+            "false_negative": 47
+          },
+          "test": {
+            "threshold": 0.8057340383529663,
+            "precision": 0.9807692307692307,
+            "recall": 0.51,
+            "false_positive_rate": 0.008333333333333333,
+            "f1": 0.6710526315789475,
+            "roc_auc": 0.9492291666666667,
+            "true_positive": 102,
+            "false_positive": 2,
+            "true_negative": 238,
+            "false_negative": 98
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 396,
+              "two_factor_required": 44
+            },
+            "fraud_interventions": 42,
+            "legitimate_interventions": 2,
+            "additional_fraud_interventions": 42,
+            "additional_legitimate_interventions": 2,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 2,
+              "mean_score": 0.7884202301502228
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9056229814887047
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.905912509560585
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.7793681278824807
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.00032792581332614646
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.00033354870392940936
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 2,
+              "mean_score": 0.7891577035188675
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.004153929895255715
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.005010040069464594
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 20,
+              "mean_score": 0.8123038724064827
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0009400314622325823
+            }
+          }
+        },
+        "0.05": {
+          "validation": {
+            "threshold": 0.7982810735702515,
+            "precision": 0.9322033898305084,
+            "recall": 0.55,
+            "false_positive_rate": 0.03333333333333333,
+            "f1": 0.6918238993710691,
+            "roc_auc": 0.9483333333333334,
+            "true_positive": 55,
+            "false_positive": 4,
+            "true_negative": 116,
+            "false_negative": 45
+          },
+          "test": {
+            "threshold": 0.7982810735702515,
+            "precision": 0.9217391304347826,
+            "recall": 0.53,
+            "false_positive_rate": 0.0375,
+            "f1": 0.673015873015873,
+            "roc_auc": 0.9492291666666667,
+            "true_positive": 106,
+            "false_positive": 9,
+            "true_negative": 231,
+            "false_negative": 94
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 385,
+              "two_factor_required": 55
+            },
+            "fraud_interventions": 46,
+            "legitimate_interventions": 9,
+            "additional_fraud_interventions": 46,
+            "additional_legitimate_interventions": 9,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 6,
+              "mean_score": 0.7884202301502228
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9056229814887047
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.905912509560585
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.7793681278824807
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.00032792581332614646
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.00033354870392940936
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 9,
+              "mean_score": 0.7891577035188675
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.004153929895255715
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.005010040069464594
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 20,
+              "mean_score": 0.8123038724064827
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0009400314622325823
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed": 42,
+      "method": "v2_directed",
+      "training": {
+        "best_epoch": 96,
+        "validation_loss": 0.16580156981945038,
+        "initial_training_loss": 0.6862092018127441,
+        "final_training_loss": 0.16470451653003693
+      },
+      "comparison": {
+        "0.0": {
+          "validation": {
+            "threshold": 0.8152144551277161,
+            "precision": 1.0,
+            "recall": 0.77,
+            "false_positive_rate": 0.0,
+            "f1": 0.8700564971751412,
+            "roc_auc": 0.983,
+            "true_positive": 77,
+            "false_positive": 0,
+            "true_negative": 120,
+            "false_negative": 23
+          },
+          "test": {
+            "threshold": 0.8152144551277161,
+            "precision": 1.0,
+            "recall": 0.78,
+            "false_positive_rate": 0.0,
+            "f1": 0.8764044943820225,
+            "roc_auc": 0.9804375,
+            "true_positive": 156,
+            "false_positive": 0,
+            "true_negative": 240,
+            "false_negative": 44
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 360,
+              "two_factor_required": 80
+            },
+            "fraud_interventions": 80,
+            "legitimate_interventions": 0,
+            "additional_fraud_interventions": 80,
+            "additional_legitimate_interventions": 0,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.6016827628016472
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9988665640354156
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9941173121333122
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8641981065273285
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 1.6153375810290527e-06
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 3.5482407383824467e-06
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.629364938288927
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0001766685297297954
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0006664126871328335
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 36,
+              "mean_score": 0.8979128062725067
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.07728254025569185
+            }
+          }
+        },
+        "0.01": {
+          "validation": {
+            "threshold": 0.7682763934135437,
+            "precision": 0.9876543209876543,
+            "recall": 0.8,
+            "false_positive_rate": 0.008333333333333333,
+            "f1": 0.8839779005524862,
+            "roc_auc": 0.983,
+            "true_positive": 80,
+            "false_positive": 1,
+            "true_negative": 119,
+            "false_negative": 20
+          },
+          "test": {
+            "threshold": 0.7682763934135437,
+            "precision": 0.9588235294117647,
+            "recall": 0.815,
+            "false_positive_rate": 0.029166666666666667,
+            "f1": 0.881081081081081,
+            "roc_auc": 0.9804375,
+            "true_positive": 163,
+            "false_positive": 7,
+            "true_negative": 233,
+            "false_negative": 37
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 358,
+              "two_factor_required": 82
+            },
+            "fraud_interventions": 81,
+            "legitimate_interventions": 1,
+            "additional_fraud_interventions": 81,
+            "additional_legitimate_interventions": 1,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 3,
+              "mean_score": 0.6016827628016472
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9988665640354156
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9941173121333122
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8641981065273285
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 1.6153375810290527e-06
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 3.5482407383824467e-06
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 7,
+              "mean_score": 0.629364938288927
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0001766685297297954
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0006664126871328335
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8979128062725067
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.07728254025569185
+            }
+          }
+        },
+        "0.05": {
+          "validation": {
+            "threshold": 0.6504449248313904,
+            "precision": 0.9368421052631579,
+            "recall": 0.89,
+            "false_positive_rate": 0.05,
+            "f1": 0.9128205128205129,
+            "roc_auc": 0.983,
+            "true_positive": 89,
+            "false_positive": 6,
+            "true_negative": 114,
+            "false_negative": 11
+          },
+          "test": {
+            "threshold": 0.6504449248313904,
+            "precision": 0.8963730569948186,
+            "recall": 0.865,
+            "false_positive_rate": 0.08333333333333333,
+            "f1": 0.8804071246819338,
+            "roc_auc": 0.9804375,
+            "true_positive": 173,
+            "false_positive": 20,
+            "true_negative": 220,
+            "false_negative": 27
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 344,
+              "two_factor_required": 96
+            },
+            "fraud_interventions": 85,
+            "legitimate_interventions": 11,
+            "additional_fraud_interventions": 85,
+            "additional_legitimate_interventions": 11,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 13,
+              "mean_score": 0.6016827628016472
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9988665640354156
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9941173121333122
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8641981065273285
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 1.6153375810290527e-06
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 3.5482407383824467e-06
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 20,
+              "mean_score": 0.629364938288927
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0001766685297297954
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0006664126871328335
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8979128062725067
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.07728254025569185
+            }
+          }
+        }
+      },
+      "export_max_absolute_error": 6.502713611467037e-07,
+      "model_sha256": "6c6c9eedcbd63bde1ced13f79c2d543233472f14e1a336a1ca5adf5fbc099a2e"
+    },
+    {
+      "seed": 43,
+      "method": "v1_retrained",
+      "training": {
+        "best_epoch": 100,
+        "validation_loss": 0.3512214422225952,
+        "initial_training_loss": 0.7011237144470215,
+        "final_training_loss": 0.35343801975250244
+      },
+      "comparison": {
+        "0.0": {
+          "validation": {
+            "threshold": 0.8188436031341553,
+            "precision": 1.0,
+            "recall": 0.34,
+            "false_positive_rate": 0.0,
+            "f1": 0.5074626865671642,
+            "roc_auc": 0.8930833333333333,
+            "true_positive": 34,
+            "false_positive": 0,
+            "true_negative": 120,
+            "false_negative": 66
+          },
+          "test": {
+            "threshold": 0.8188436031341553,
+            "precision": 1.0,
+            "recall": 0.255,
+            "false_positive_rate": 0.0,
+            "f1": 0.4063745019920319,
+            "roc_auc": 0.8816041666666666,
+            "true_positive": 51,
+            "false_positive": 0,
+            "true_negative": 240,
+            "false_negative": 149
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 412,
+              "two_factor_required": 28
+            },
+            "fraud_interventions": 28,
+            "legitimate_interventions": 0,
+            "additional_fraud_interventions": 28,
+            "additional_legitimate_interventions": 0,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.6424109190702438
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 4,
+              "mean_score": 0.7147026300430298
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 7,
+              "mean_score": 0.7517974138259887
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8464301884174347
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0006238099118490936
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 2.6479915959595757e-11
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.6763150662183761
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.00153637278417591
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0004270866684237262
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.6424109175801277
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.6424109190702438
+            }
+          }
+        },
+        "0.01": {
+          "validation": {
+            "threshold": 0.8188436031341553,
+            "precision": 1.0,
+            "recall": 0.34,
+            "false_positive_rate": 0.0,
+            "f1": 0.5074626865671642,
+            "roc_auc": 0.8930833333333333,
+            "true_positive": 34,
+            "false_positive": 0,
+            "true_negative": 120,
+            "false_negative": 66
+          },
+          "test": {
+            "threshold": 0.8188436031341553,
+            "precision": 1.0,
+            "recall": 0.255,
+            "false_positive_rate": 0.0,
+            "f1": 0.4063745019920319,
+            "roc_auc": 0.8816041666666666,
+            "true_positive": 51,
+            "false_positive": 0,
+            "true_negative": 240,
+            "false_negative": 149
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 412,
+              "two_factor_required": 28
+            },
+            "fraud_interventions": 28,
+            "legitimate_interventions": 0,
+            "additional_fraud_interventions": 28,
+            "additional_legitimate_interventions": 0,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.6424109190702438
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 4,
+              "mean_score": 0.7147026300430298
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 7,
+              "mean_score": 0.7517974138259887
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8464301884174347
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0006238099118490936
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 2.6479915959595757e-11
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.6763150662183761
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.00153637278417591
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0004270866684237262
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.6424109175801277
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.6424109190702438
+            }
+          }
+        },
+        "0.05": {
+          "validation": {
+            "threshold": 0.7801385521888733,
+            "precision": 0.9047619047619048,
+            "recall": 0.38,
+            "false_positive_rate": 0.03333333333333333,
+            "f1": 0.5352112676056339,
+            "roc_auc": 0.8930833333333333,
+            "true_positive": 38,
+            "false_positive": 4,
+            "true_negative": 116,
+            "false_negative": 62
+          },
+          "test": {
+            "threshold": 0.7801385521888733,
+            "precision": 0.9,
+            "recall": 0.315,
+            "false_positive_rate": 0.029166666666666667,
+            "f1": 0.4666666666666667,
+            "roc_auc": 0.8816041666666666,
+            "true_positive": 63,
+            "false_positive": 7,
+            "true_negative": 233,
+            "false_negative": 137
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 399,
+              "two_factor_required": 41
+            },
+            "fraud_interventions": 34,
+            "legitimate_interventions": 7,
+            "additional_fraud_interventions": 34,
+            "additional_legitimate_interventions": 7,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 3,
+              "mean_score": 0.6424109190702438
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 10,
+              "mean_score": 0.7147026300430298
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 7,
+              "mean_score": 0.7517974138259887
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8464301884174347
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0006238099118490936
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 2.6479915959595757e-11
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 4,
+              "mean_score": 0.6763150662183761
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.00153637278417591
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0004270866684237262
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 3,
+              "mean_score": 0.6424109175801277
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 3,
+              "mean_score": 0.6424109190702438
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed": 43,
+      "method": "v2_tabular",
+      "training": {
+        "best_epoch": 100,
+        "validation_loss": 0.16865719854831696,
+        "initial_training_loss": 0.6906712651252747,
+        "final_training_loss": 0.17348797619342804
+      },
+      "comparison": {
+        "0.0": {
+          "validation": {
+            "threshold": 0.7690809965133667,
+            "precision": 1.0,
+            "recall": 0.81,
+            "false_positive_rate": 0.0,
+            "f1": 0.8950276243093923,
+            "roc_auc": 0.98375,
+            "true_positive": 81,
+            "false_positive": 0,
+            "true_negative": 120,
+            "false_negative": 19
+          },
+          "test": {
+            "threshold": 0.7690809965133667,
+            "precision": 0.9876543209876543,
+            "recall": 0.8,
+            "false_positive_rate": 0.008333333333333333,
+            "f1": 0.8839779005524862,
+            "roc_auc": 0.98075,
+            "true_positive": 160,
+            "false_positive": 2,
+            "true_negative": 238,
+            "false_negative": 40
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 358,
+              "two_factor_required": 82
+            },
+            "fraud_interventions": 80,
+            "legitimate_interventions": 2,
+            "additional_fraud_interventions": 80,
+            "additional_legitimate_interventions": 2,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.586775691062212
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9869293883442879
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9866061508655548
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8166345864534378
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.00011478016458568163
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 1.5478906357202503e-05
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 2,
+              "mean_score": 0.634882191568613
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0018257623334648088
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.007770198851358145
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9564432680606842
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.013309567187388894
+            }
+          }
+        },
+        "0.01": {
+          "validation": {
+            "threshold": 0.7690809965133667,
+            "precision": 1.0,
+            "recall": 0.81,
+            "false_positive_rate": 0.0,
+            "f1": 0.8950276243093923,
+            "roc_auc": 0.98375,
+            "true_positive": 81,
+            "false_positive": 0,
+            "true_negative": 120,
+            "false_negative": 19
+          },
+          "test": {
+            "threshold": 0.7690809965133667,
+            "precision": 0.9876543209876543,
+            "recall": 0.8,
+            "false_positive_rate": 0.008333333333333333,
+            "f1": 0.8839779005524862,
+            "roc_auc": 0.98075,
+            "true_positive": 160,
+            "false_positive": 2,
+            "true_negative": 238,
+            "false_negative": 40
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 358,
+              "two_factor_required": 82
+            },
+            "fraud_interventions": 80,
+            "legitimate_interventions": 2,
+            "additional_fraud_interventions": 80,
+            "additional_legitimate_interventions": 2,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.586775691062212
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9869293883442879
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9866061508655548
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8166345864534378
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.00011478016458568163
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 1.5478906357202503e-05
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 2,
+              "mean_score": 0.634882191568613
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0018257623334648088
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.007770198851358145
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9564432680606842
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.013309567187388894
+            }
+          }
+        },
+        "0.05": {
+          "validation": {
+            "threshold": 0.6952463984489441,
+            "precision": 0.9368421052631579,
+            "recall": 0.89,
+            "false_positive_rate": 0.05,
+            "f1": 0.9128205128205129,
+            "roc_auc": 0.98375,
+            "true_positive": 89,
+            "false_positive": 6,
+            "true_negative": 114,
+            "false_negative": 11
+          },
+          "test": {
+            "threshold": 0.6952463984489441,
+            "precision": 0.9057591623036649,
+            "recall": 0.865,
+            "false_positive_rate": 0.075,
+            "f1": 0.8849104859335037,
+            "roc_auc": 0.98075,
+            "true_positive": 173,
+            "false_positive": 18,
+            "true_negative": 222,
+            "false_negative": 27
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 346,
+              "two_factor_required": 94
+            },
+            "fraud_interventions": 85,
+            "legitimate_interventions": 9,
+            "additional_fraud_interventions": 85,
+            "additional_legitimate_interventions": 9,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 13,
+              "mean_score": 0.586775691062212
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9869293883442879
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9866061508655548
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8166345864534378
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.00011478016458568163
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 1.5478906357202503e-05
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 18,
+              "mean_score": 0.634882191568613
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0018257623334648088
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.007770198851358145
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9564432680606842
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.013309567187388894
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed": 43,
+      "method": "v2_directed",
+      "training": {
+        "best_epoch": 97,
+        "validation_loss": 0.17255643010139465,
+        "initial_training_loss": 0.7026242613792419,
+        "final_training_loss": 0.1737966239452362
+      },
+      "comparison": {
+        "0.0": {
+          "validation": {
+            "threshold": 0.792584240436554,
+            "precision": 1.0,
+            "recall": 0.8,
+            "false_positive_rate": 0.0,
+            "f1": 0.888888888888889,
+            "roc_auc": 0.9840833333333333,
+            "true_positive": 80,
+            "false_positive": 0,
+            "true_negative": 120,
+            "false_negative": 20
+          },
+          "test": {
+            "threshold": 0.792584240436554,
+            "precision": 1.0,
+            "recall": 0.8,
+            "false_positive_rate": 0.0,
+            "f1": 0.888888888888889,
+            "roc_auc": 0.9812916666666667,
+            "true_positive": 160,
+            "false_positive": 0,
+            "true_negative": 240,
+            "false_negative": 40
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 360,
+              "two_factor_required": 80
+            },
+            "fraud_interventions": 80,
+            "legitimate_interventions": 0,
+            "additional_fraud_interventions": 80,
+            "additional_legitimate_interventions": 0,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.6240572854876518
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9980364292860031
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9936364710330963
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8723365440964699
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 2.2125874352241224e-06
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 1.0633294550643768e-05
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.6465399853885174
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0003006395203556167
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0005468731611472322
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.870272770524025
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.11559564769268035
+            }
+          }
+        },
+        "0.01": {
+          "validation": {
+            "threshold": 0.792584240436554,
+            "precision": 1.0,
+            "recall": 0.8,
+            "false_positive_rate": 0.0,
+            "f1": 0.888888888888889,
+            "roc_auc": 0.9840833333333333,
+            "true_positive": 80,
+            "false_positive": 0,
+            "true_negative": 120,
+            "false_negative": 20
+          },
+          "test": {
+            "threshold": 0.792584240436554,
+            "precision": 1.0,
+            "recall": 0.8,
+            "false_positive_rate": 0.0,
+            "f1": 0.888888888888889,
+            "roc_auc": 0.9812916666666667,
+            "true_positive": 160,
+            "false_positive": 0,
+            "true_negative": 240,
+            "false_negative": 40
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 360,
+              "two_factor_required": 80
+            },
+            "fraud_interventions": 80,
+            "legitimate_interventions": 0,
+            "additional_fraud_interventions": 80,
+            "additional_legitimate_interventions": 0,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.6240572854876518
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9980364292860031
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9936364710330963
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8723365440964699
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 2.2125874352241224e-06
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 1.0633294550643768e-05
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.6465399853885174
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0003006395203556167
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0005468731611472322
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.870272770524025
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.11559564769268035
+            }
+          }
+        },
+        "0.05": {
+          "validation": {
+            "threshold": 0.6713112592697144,
+            "precision": 0.9361702127659575,
+            "recall": 0.88,
+            "false_positive_rate": 0.05,
+            "f1": 0.9072164948453608,
+            "roc_auc": 0.9840833333333333,
+            "true_positive": 88,
+            "false_positive": 6,
+            "true_negative": 114,
+            "false_negative": 12
+          },
+          "test": {
+            "threshold": 0.6713112592697144,
+            "precision": 0.9010416666666666,
+            "recall": 0.865,
+            "false_positive_rate": 0.07916666666666666,
+            "f1": 0.8826530612244896,
+            "roc_auc": 0.9812916666666667,
+            "true_positive": 173,
+            "false_positive": 19,
+            "true_negative": 221,
+            "false_negative": 27
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 345,
+              "two_factor_required": 95
+            },
+            "fraud_interventions": 85,
+            "legitimate_interventions": 10,
+            "additional_fraud_interventions": 85,
+            "additional_legitimate_interventions": 10,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 13,
+              "mean_score": 0.6240572854876518
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9980364292860031
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9936364710330963
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8723365440964699
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 2.2125874352241224e-06
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 1.0633294550643768e-05
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 19,
+              "mean_score": 0.6465399853885174
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0003006395203556167
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0005468731611472322
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.870272770524025
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.11559564769268035
+            }
+          }
+        }
+      },
+      "export_max_absolute_error": 5.780573829605729e-07,
+      "model_sha256": "14604c87e1a07ae4c8e88ec0683eca6db09b21e70903918e83d601a8c03df3a8"
+    },
+    {
+      "seed": 44,
+      "method": "v1_retrained",
+      "training": {
+        "best_epoch": 100,
+        "validation_loss": 0.3080196976661682,
+        "initial_training_loss": 0.69525545835495,
+        "final_training_loss": 0.31118935346603394
+      },
+      "comparison": {
+        "0.0": {
+          "validation": {
+            "threshold": 0.7184817790985107,
+            "precision": 1.0,
+            "recall": 0.6,
+            "false_positive_rate": 0.0,
+            "f1": 0.7499999999999999,
+            "roc_auc": 0.933875,
+            "true_positive": 60,
+            "false_positive": 0,
+            "true_negative": 120,
+            "false_negative": 40
+          },
+          "test": {
+            "threshold": 0.7184817790985107,
+            "precision": 0.9741379310344828,
+            "recall": 0.565,
+            "false_positive_rate": 0.0125,
+            "f1": 0.7151898734177216,
+            "roc_auc": 0.9249166666666667,
+            "true_positive": 113,
+            "false_positive": 3,
+            "true_negative": 237,
+            "false_negative": 87
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 384,
+              "two_factor_required": 56
+            },
+            "fraud_interventions": 53,
+            "legitimate_interventions": 3,
+            "additional_fraud_interventions": 53,
+            "additional_legitimate_interventions": 3,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 1,
+              "mean_score": 0.5639929585158825
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 31,
+              "mean_score": 0.8088899984955787
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9305241048336029
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8059194013476372
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 9.904094131343299e-05
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 1.302616685627811e-08
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 2,
+              "mean_score": 0.595361203700304
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.012411194434389473
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 7.236944229589426e-05
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 1,
+              "mean_score": 0.5639929562807083
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 1,
+              "mean_score": 0.5639929547905922
+            }
+          }
+        },
+        "0.01": {
+          "validation": {
+            "threshold": 0.718481719493866,
+            "precision": 0.9838709677419355,
+            "recall": 0.61,
+            "false_positive_rate": 0.008333333333333333,
+            "f1": 0.7530864197530864,
+            "roc_auc": 0.933875,
+            "true_positive": 61,
+            "false_positive": 1,
+            "true_negative": 119,
+            "false_negative": 39
+          },
+          "test": {
+            "threshold": 0.718481719493866,
+            "precision": 0.9741379310344828,
+            "recall": 0.565,
+            "false_positive_rate": 0.0125,
+            "f1": 0.7151898734177216,
+            "roc_auc": 0.9249166666666667,
+            "true_positive": 113,
+            "false_positive": 3,
+            "true_negative": 237,
+            "false_negative": 87
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 384,
+              "two_factor_required": 56
+            },
+            "fraud_interventions": 53,
+            "legitimate_interventions": 3,
+            "additional_fraud_interventions": 53,
+            "additional_legitimate_interventions": 3,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 1,
+              "mean_score": 0.5639929585158825
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 31,
+              "mean_score": 0.8088899984955787
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9305241048336029
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8059194013476372
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 9.904094131343299e-05
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 1.302616685627811e-08
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 2,
+              "mean_score": 0.595361203700304
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.012411194434389473
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 7.236944229589426e-05
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 1,
+              "mean_score": 0.5639929562807083
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 1,
+              "mean_score": 0.5639929547905922
+            }
+          }
+        },
+        "0.05": {
+          "validation": {
+            "threshold": 0.7102784514427185,
+            "precision": 0.9130434782608695,
+            "recall": 0.63,
+            "false_positive_rate": 0.05,
+            "f1": 0.7455621301775148,
+            "roc_auc": 0.933875,
+            "true_positive": 63,
+            "false_positive": 6,
+            "true_negative": 114,
+            "false_negative": 37
+          },
+          "test": {
+            "threshold": 0.7102784514427185,
+            "precision": 0.9285714285714286,
+            "recall": 0.585,
+            "false_positive_rate": 0.0375,
+            "f1": 0.7177914110429447,
+            "roc_auc": 0.9249166666666667,
+            "true_positive": 117,
+            "false_positive": 9,
+            "true_negative": 231,
+            "false_negative": 83
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 374,
+              "two_factor_required": 66
+            },
+            "fraud_interventions": 57,
+            "legitimate_interventions": 9,
+            "additional_fraud_interventions": 57,
+            "additional_legitimate_interventions": 9,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 3,
+              "mean_score": 0.5639929585158825
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 31,
+              "mean_score": 0.8088899984955787
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9305241048336029
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8059194013476372
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 9.904094131343299e-05
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 1.302616685627811e-08
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 6,
+              "mean_score": 0.595361203700304
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.012411194434389473
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 7.236944229589426e-05
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 3,
+              "mean_score": 0.5639929562807083
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 3,
+              "mean_score": 0.5639929547905922
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed": 44,
+      "method": "v2_tabular",
+      "training": {
+        "best_epoch": 99,
+        "validation_loss": 0.17072027921676636,
+        "initial_training_loss": 0.6920574307441711,
+        "final_training_loss": 0.17512674629688263
+      },
+      "comparison": {
+        "0.0": {
+          "validation": {
+            "threshold": 0.786797046661377,
+            "precision": 1.0,
+            "recall": 0.81,
+            "false_positive_rate": 0.0,
+            "f1": 0.8950276243093923,
+            "roc_auc": 0.9836666666666667,
+            "true_positive": 81,
+            "false_positive": 0,
+            "true_negative": 120,
+            "false_negative": 19
+          },
+          "test": {
+            "threshold": 0.786797046661377,
+            "precision": 0.9815950920245399,
+            "recall": 0.8,
+            "false_positive_rate": 0.0125,
+            "f1": 0.8815426997245179,
+            "roc_auc": 0.98075,
+            "true_positive": 160,
+            "false_positive": 3,
+            "true_negative": 237,
+            "false_negative": 40
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 357,
+              "two_factor_required": 83
+            },
+            "fraud_interventions": 80,
+            "legitimate_interventions": 3,
+            "additional_fraud_interventions": 80,
+            "additional_legitimate_interventions": 3,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.6163686588406563
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9881829231977463
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9879035249352455
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8232887655496597
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0006938046091818251
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.00026462157620699145
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 3,
+              "mean_score": 0.6620543345808982
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.001972790260333568
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.004798207024578005
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9518902108073235
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.011818397828028538
+            }
+          }
+        },
+        "0.01": {
+          "validation": {
+            "threshold": 0.786797046661377,
+            "precision": 1.0,
+            "recall": 0.81,
+            "false_positive_rate": 0.0,
+            "f1": 0.8950276243093923,
+            "roc_auc": 0.9836666666666667,
+            "true_positive": 81,
+            "false_positive": 0,
+            "true_negative": 120,
+            "false_negative": 19
+          },
+          "test": {
+            "threshold": 0.786797046661377,
+            "precision": 0.9815950920245399,
+            "recall": 0.8,
+            "false_positive_rate": 0.0125,
+            "f1": 0.8815426997245179,
+            "roc_auc": 0.98075,
+            "true_positive": 160,
+            "false_positive": 3,
+            "true_negative": 237,
+            "false_negative": 40
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 357,
+              "two_factor_required": 83
+            },
+            "fraud_interventions": 80,
+            "legitimate_interventions": 3,
+            "additional_fraud_interventions": 80,
+            "additional_legitimate_interventions": 3,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.6163686588406563
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9881829231977463
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9879035249352455
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8232887655496597
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0006938046091818251
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.00026462157620699145
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 3,
+              "mean_score": 0.6620543345808982
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.001972790260333568
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.004798207024578005
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9518902108073235
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.011818397828028538
+            }
+          }
+        },
+        "0.05": {
+          "validation": {
+            "threshold": 0.7270560264587402,
+            "precision": 0.9368421052631579,
+            "recall": 0.89,
+            "false_positive_rate": 0.05,
+            "f1": 0.9128205128205129,
+            "roc_auc": 0.9836666666666667,
+            "true_positive": 89,
+            "false_positive": 6,
+            "true_negative": 114,
+            "false_negative": 11
+          },
+          "test": {
+            "threshold": 0.7270560264587402,
+            "precision": 0.9057591623036649,
+            "recall": 0.865,
+            "false_positive_rate": 0.075,
+            "f1": 0.8849104859335037,
+            "roc_auc": 0.98075,
+            "true_positive": 173,
+            "false_positive": 18,
+            "true_negative": 222,
+            "false_negative": 27
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 346,
+              "two_factor_required": 94
+            },
+            "fraud_interventions": 85,
+            "legitimate_interventions": 9,
+            "additional_fraud_interventions": 85,
+            "additional_legitimate_interventions": 9,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 13,
+              "mean_score": 0.6163686588406563
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9881829231977463
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9879035249352455
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8232887655496597
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0006938046091818251
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.00026462157620699145
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 18,
+              "mean_score": 0.6620543345808982
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.001972790260333568
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.004798207024578005
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9518902108073235
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.011818397828028538
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed": 44,
+      "method": "v2_directed",
+      "training": {
+        "best_epoch": 100,
+        "validation_loss": 0.17930321395397186,
+        "initial_training_loss": 0.6925336718559265,
+        "final_training_loss": 0.1765674650669098
+      },
+      "comparison": {
+        "0.0": {
+          "validation": {
+            "threshold": 0.7968279719352722,
+            "precision": 1.0,
+            "recall": 0.76,
+            "false_positive_rate": 0.0,
+            "f1": 0.8636363636363636,
+            "roc_auc": 0.9825,
+            "true_positive": 76,
+            "false_positive": 0,
+            "true_negative": 120,
+            "false_negative": 24
+          },
+          "test": {
+            "threshold": 0.7968279719352722,
+            "precision": 0.9931972789115646,
+            "recall": 0.73,
+            "false_positive_rate": 0.004166666666666667,
+            "f1": 0.8414985590778098,
+            "roc_auc": 0.9774166666666667,
+            "true_positive": 146,
+            "false_positive": 1,
+            "true_negative": 239,
+            "false_negative": 54
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 368,
+              "two_factor_required": 72
+            },
+            "fraud_interventions": 71,
+            "legitimate_interventions": 1,
+            "additional_fraud_interventions": 71,
+            "additional_legitimate_interventions": 1,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 1,
+              "mean_score": 0.630818972736597
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9971298903226853
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9900438889861107
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8565926879644394
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 3.859820793650215e-06
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 3.686682637180638e-05
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 1,
+              "mean_score": 0.6607765898108482
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0004735380522106425
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0015157723464653827
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 25,
+              "mean_score": 0.865471574664116
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.11997421614360064
+            }
+          }
+        },
+        "0.01": {
+          "validation": {
+            "threshold": 0.7968279719352722,
+            "precision": 1.0,
+            "recall": 0.76,
+            "false_positive_rate": 0.0,
+            "f1": 0.8636363636363636,
+            "roc_auc": 0.9825,
+            "true_positive": 76,
+            "false_positive": 0,
+            "true_negative": 120,
+            "false_negative": 24
+          },
+          "test": {
+            "threshold": 0.7968279719352722,
+            "precision": 0.9931972789115646,
+            "recall": 0.73,
+            "false_positive_rate": 0.004166666666666667,
+            "f1": 0.8414985590778098,
+            "roc_auc": 0.9774166666666667,
+            "true_positive": 146,
+            "false_positive": 1,
+            "true_negative": 239,
+            "false_negative": 54
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 368,
+              "two_factor_required": 72
+            },
+            "fraud_interventions": 71,
+            "legitimate_interventions": 1,
+            "additional_fraud_interventions": 71,
+            "additional_legitimate_interventions": 1,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 1,
+              "mean_score": 0.630818972736597
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9971298903226853
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9900438889861107
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8565926879644394
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 3.859820793650215e-06
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 3.686682637180638e-05
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 1,
+              "mean_score": 0.6607765898108482
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0004735380522106425
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0015157723464653827
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 25,
+              "mean_score": 0.865471574664116
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.11997421614360064
+            }
+          }
+        },
+        "0.05": {
+          "validation": {
+            "threshold": 0.6684946417808533,
+            "precision": 0.9468085106382979,
+            "recall": 0.89,
+            "false_positive_rate": 0.041666666666666664,
+            "f1": 0.9175257731958764,
+            "roc_auc": 0.9825,
+            "true_positive": 89,
+            "false_positive": 5,
+            "true_negative": 115,
+            "false_negative": 11
+          },
+          "test": {
+            "threshold": 0.6684946417808533,
+            "precision": 0.890625,
+            "recall": 0.855,
+            "false_positive_rate": 0.0875,
+            "f1": 0.8724489795918368,
+            "roc_auc": 0.9774166666666667,
+            "true_positive": 171,
+            "false_positive": 21,
+            "true_negative": 219,
+            "false_negative": 29
+          },
+          "policy_with_20_point_cap": {
+            "interventions": {
+              "approved": 342,
+              "two_factor_required": 98
+            },
+            "fraud_interventions": 85,
+            "legitimate_interventions": 13,
+            "additional_fraud_interventions": 85,
+            "additional_legitimate_interventions": 13,
+            "additional_legitimate_rejections": 0,
+            "positives": 200,
+            "negatives": 240
+          },
+          "by_scenario": {
+            "mule_direct": {
+              "samples": 40,
+              "flagged": 11,
+              "mean_score": 0.630818972736597
+            },
+            "mule_two_hops": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9971298903226853
+            },
+            "mule_no_risky_neighbor": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.9900438889861107
+            },
+            "mule_first_repass": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.8565926879644394
+            },
+            "innocent_payer": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 3.859820793650215e-06
+            },
+            "merchant": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 3.686682637180638e-05
+            },
+            "merchant_fast_settlement": {
+              "samples": 40,
+              "flagged": 21,
+              "mean_score": 0.6607765898108482
+            },
+            "normal": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0004735380522106425
+            },
+            "stale_contact": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.0015157723464653827
+            },
+            "temporal_fast": {
+              "samples": 40,
+              "flagged": 40,
+              "mean_score": 0.865471574664116
+            },
+            "temporal_slow": {
+              "samples": 40,
+              "flagged": 0,
+              "mean_score": 0.11997421614360064
+            }
+          }
+        }
+      },
+      "export_max_absolute_error": 6.602428207491684e-07,
+      "model_sha256": "63061ced6afcdd388b276acb7098c700f277994ca68eaf95b9861cf8ebb173e7"
+    }
+  ],
+  "source_sha256": {
+    "/app/scripts/train_temporal_gnn.py": "16c3228aa04776d7c1eddd990ae40fa7ccc47ca0851c30ca357d2180a3813897",
+    "scripts/temporal_graph_examples.py": "94cba1bd79e7ccd1ec9d44916c96386a93c031d8d85699d92ecb56cd58787569",
+    "src/gnn/temporal_graph.py": "bf1c6d371f665fc4db68903839814b2be190e2f9dcc34231301e521e554c0044",
+    "src/gnn/temporal_model.py": "dc5956abccdec9678f56a1f640222839f63e1d3d8baad144d75bac5df2a9fe3e",
+    "src/gnn/evaluation.py": "3db42e65a7fe6e59e8a8c50921a93fff8db6b80af0f59ebd5532caff28de3cbb",
+    "scripts/evaluate_graph_untrust.py": "1728e002f62a80bfbb1bc4062c1ae3667ae2b6d4f1dcbe9b4bccde335e9191ad",
+    "config/risk-policy.json": "4e1dc6894a5dd2fdca12c0d639416706fbc9288ce01af982a20e5cad5e7c6676",
+    "models/gnn-synthetic-v1.json": "e87cdbc048455cf00360bd568601ce6819efab002a1c4b779da285dcd5a7540c"
+  }
+}

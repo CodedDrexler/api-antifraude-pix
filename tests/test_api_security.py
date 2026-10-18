@@ -1,6 +1,5 @@
 import asyncio
 import json
-from types import SimpleNamespace
 
 import pytest
 from conftest import request
@@ -118,15 +117,18 @@ def test_body_read_has_total_deadline():
     assert result[0] == 408
 
 
-def test_unauthorized_request_never_buffers_body_and_sets_security_headers():
+@pytest.mark.parametrize("token", [None, b"wrong-token"])
+def test_request_without_internal_token_reaches_endpoint_and_sets_security_headers(token):
     app = endpoint_app()
-    app.state.settings = SimpleNamespace(internal_token="correct-token")
     app.add_middleware(RequestLimitsMiddleware)
     register_request_middleware(app)
-    status, headers, body, reads = exercise(app, chunks=(b" " * 100_000,))
-    assert status == 403
-    assert reads == 0
-    assert body["code"] == "PIX000403"
+    request_headers = [(b"content-type", b"application/json")]
+    if token is not None:
+        request_headers.append((b"internal-token", token))
+    status, headers, body, reads = exercise(app, headers=request_headers, chunks=(b'{"ok":true}',))
+    assert status == 200
+    assert reads > 0
+    assert body == {"ok": True}
     assert headers[b"cache-control"] == b"no-store"
     assert headers[b"x-content-type-options"] == b"nosniff"
     assert b"x-request-id" in headers
@@ -134,16 +136,13 @@ def test_unauthorized_request_never_buffers_body_and_sets_security_headers():
 
 def test_unhandled_error_does_not_leak_exception_details_and_is_correlated(caplog):
     app = FastAPI()
-    app.state.settings = SimpleNamespace(internal_token="correct-token")
 
     @app.get("/fail")
     def fail():
         raise RuntimeError("sensitive-sql-password-and-document")
 
     register_request_middleware(app)
-    status, headers, body, _ = exercise(
-        app, path="/fail", method="GET", headers=[(b"internal-token", b"correct-token")]
-    )
+    status, headers, body, _ = exercise(app, path="/fail", method="GET")
     assert status == 500
     assert body["code"] == "PIX000500"
     assert "sensitive-sql-password-and-document" not in json.dumps(body) + caplog.text

@@ -1,12 +1,13 @@
 # Desconfiança acumulada por conta (`account_untrust`)
 
-Implementação: `pix-score-v5`. O indicador usa análises locais recentes para
+Implementação atual: `pix-score-v8`. O indicador usa análises locais recentes para
 exigir verificação adicional quando uma conta repete comportamentos de risco.
 Não é uma probabilidade, uma lista de fraudadores nem confirmação de fraude.
 
 ## Identidade, evidências e janela
 
-A conta é identificada por instituição, agência, número e documento normalizado.
+A conta é identificada por instituição quando informada, agência, número e documento normalizado.
+A instituição da origem não é obrigatória no contrato; a identidade não é global.
 A data de abertura não faz parte da identidade: alterá-la não zera o acumulado.
 Os controles existentes por documento continuam reunindo contas do mesmo pagador;
 o `account_untrust` é específico da conta. A identidade vem de um integrador
@@ -20,8 +21,21 @@ expira; não existe uma marca permanente na conta.
 
 O cálculo usa apenas evidências próprias da transação, antes do GNN e antes de
 aplicar o acumulado. As contribuições elegíveis são volume/frequência, perfil de
-valores, dispositivos e destinatário. Primeiro Pix, idade da conta e horário,
+valores e dispositivos. Destinatário novo/desconhecido não alimenta a suspeita própria.
+Primeiro Pix, idade da conta e horário,
 isoladamente, não criam desconfiança acumulada.
+
+Desde a v7, a elegibilidade segue os códigos das regras, independentemente do grupo
+configurado. Mover primeiro Pix, histórico insuficiente ou duplicidade para outro
+grupo não cria suspeita; mover desvio de perfil não remove sua elegibilidade.
+Os pontos continuam respeitando pesos e tetos. Veja a
+[revisão com testes de casos parecidos](decision-contrasts.md).
+
+Na v8, somente incrementos com `evidence_version=sender-evidence-v2` entram nas
+consultas de acumulado, titular e grafo temporal. O legado continua auditável,
+mas não transporta contribuições ambíguas de destinatário para a suspeita própria.
+A nova janela é formada por análises v8. O [Cofre contextual](contextual-trust.md)
+pode reduzir exclusivamente a anomalia de perfil antes de calcular o incremento.
 
 - Com limite forte da transação: incremento de até 25 pontos.
 - Sem limite forte: exige score transacional de pelo menos 30; soma as
@@ -88,7 +102,7 @@ nenhum aviso externo foi entregue. GET e repetição do ID retornam a mesma foto
 Os detalhes incluem score anterior, regras elegíveis, supressão de incremento e
 parâmetros da política. [Resposta completa real da demonstração](../examples/untrust-response.json).
 
-## Dados usados para decidir o padrão
+## Dados históricos usados para decidir o padrão (v7)
 
 A avaliação reproduz o motor sobre o gerador sintético já existente no projeto:
 150 cenários de validação e 200 de teste, com contas e datas separadas entre grupos.
@@ -105,7 +119,12 @@ segue a ordem cronológica dos eventos. Os rótulos vêm do gerador, não das re
 | Rejeições de fraude sintética, com bloqueio acumulado ativado | 0 | 0 |
 | Rejeições de casos legítimos, no padrão somente 2FA | 0 | 0 |
 | Novos desafios 2FA em casos legítimos, no padrão | 3 | 1 |
-| Indicações de aviso ao banco, no padrão | 24 | 22 |
+| Indicações de aviso ao banco, no padrão | 24 | 21 |
+
+Estes números são da v7, anteriores à separação e ao Cofre da v8; não são métricas da política atual.
+Números recalculados na v7 com duplicidade e ordem de chegada reproduzidas no
+simulador. O relatório inclui transições por rótulo e exemplos com o motivo de
+cada mudança; o experimento inicial permanece preservado em arquivo separado.
 
 O bloqueio acrescentou rejeições indevidas sem ganho de rejeição de fraude nessa
 amostra. Por esse resultado, ficou desativado por padrão. Os limiares 40/60/80,

@@ -22,6 +22,9 @@ class History:
     approved_night_count: int = 0
     duplicate_transaction_id: str | None = None
     duplicate_elapsed_seconds: float | None = None
+    payer_reference_values: tuple[int, ...] = ()
+    relationship_reference_values: tuple[int, ...] = ()
+    relationship_received_days: int = 0
 
 
 @dataclass(frozen=True)

@@ -27,8 +27,12 @@ def test_compact_metadata_is_default_and_timing_is_saved(payload):
         "risk_factors",
         "risk_factors_sum",
         "gnn",
+        "gnn_v2",
         "account_untrust",
         "bank_notification",
+        "entity_risk",
+        "decision_causes",
+        "contextual_trust",
     }
     assert metadata["risk_factors"] == [
         {

@@ -1,5 +1,14 @@
 {
-  "version": "pix-score-v6",
+  "version": "pix-score-v8",
+  "contextual_trust": {
+    "enabled": true,
+    "history_size": 20,
+    "minimum_payer_samples": 5,
+    "minimum_relationship_samples": 3,
+    "minimum_received_days": 2,
+    "minimum_ratio_percent": 50,
+    "maximum_ratio_percent": 200
+  },
   "velocity_minutes": 10,
   "velocity_limit": 5,
   "accumulated_amount": 3000000,

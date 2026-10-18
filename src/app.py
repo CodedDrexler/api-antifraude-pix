@@ -2,14 +2,15 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
-from fastapi.security import APIKeyHeader
+from fastapi import FastAPI
 
 from src.constants import Policy, Settings
 from src.database import build_database
 from src.dtos.pix_dto import PixAnalysisDTO
+from src.entity_risk import EntityRiskService
 from src.errors.handlers import register_error_handlers
 from src.gnn.service import DEFAULT_MODEL, GraphRiskService
+from src.gnn.temporal_service import DEFAULT_TEMPORAL_MODEL, TemporalGraphService
 from src.middlewares.request_context import register_request_middleware
 from src.middlewares.request_limits import RequestLimitsMiddleware
 from src.resources.health_check import HealthCheckResource
@@ -27,19 +28,22 @@ def create_app(settings: Settings | None = None, policy: Policy | None = None) -
 
     application = FastAPI(
         title="Pix Antifraude",
-        version="2.3.0",
+        version="2.5.0",
         lifespan=lifespan,
         openapi_tags=[{"name": "pix"}, {"name": "health"}],
         swagger_ui_parameters={"defaultModelsExpandDepth": 0},
         description=(
             "Analisa um Pix e responde: **approved** (aprovar), **two_factor_required** "
             "(solicitar autenticação adicional) ou **rejected** (bloquear).\n\n"
-            "1. Clique em **Authorize** e informe o token interno (local: `default_token`).\n"
-            "2. Envie um Pix com um ID novo. Valores são inteiros em centavos. O primeiro Pix exige 2FA.\n"
-            "3. Consulte o mesmo ID para recuperar a decisão salva. Ative `include_details` para ver a evidência.\n\n"
+            "1. Envie um Pix com um ID novo. Valores são inteiros em centavos. O primeiro Pix exige 2FA.\n"
+            "2. Consulte o mesmo ID para recuperar a decisão salva. Ative `include_details` para ver a evidência.\n\n"
             "O score vai de 0 a 100 e não representa probabilidade de fraude. "
             "O GNN é experimental, treinado com dados sintéticos e, no padrão shadow, apenas observa. "
             "A metadata também mostra a desconfiança acumulada da conta e um indicativo de aviso ao banco, sem envio externo. "
+            "A camada entity_risk separa o histórico do titular dos vínculos societários verificados; "
+            "por padrão, apenas registra a avaliação em shadow. "
+            "O grafo v2 direcionado e temporal também analisa cada Pix em observação, "
+            "com resultados separados em gnn_v2, sem alterar a decisão. "
             "O serviço não executa 2FA, liquidação ou gestão dos limites bancários do Pix."
         ),
     )
@@ -51,14 +55,16 @@ def create_app(settings: Settings | None = None, policy: Policy | None = None) -
         mode=os.environ.get("GNN_MODE", "shadow"),
         model_path=os.environ.get("GNN_MODEL_PATH", str(DEFAULT_MODEL)),
     )
+    application.state.entity_service = EntityRiskService(
+        mode=os.environ.get("ENTITY_RISK_MODE", "shadow"),
+        registry_path=os.environ.get("ENTITY_REGISTRY_PATH") or None,
+    )
+    application.state.temporal_service = TemporalGraphService(
+        mode=os.environ.get("GNN_V2_MODE", "shadow"),
+        model_path=os.environ.get("GNN_V2_MODEL_PATH", str(DEFAULT_TEMPORAL_MODEL)),
+    )
     health = HealthCheckResource()
     pix = PixResource()
-    internal_token = APIKeyHeader(
-        name="INTERNAL-TOKEN",
-        scheme_name="InternalToken",
-        description="Informe o INTERNAL_TOKEN configurado na API (padrão local: default_token).",
-        auto_error=False,
-    )
     application.add_api_route(
         "/health",
         health.on_get_health,
@@ -86,7 +92,6 @@ def create_app(settings: Settings | None = None, policy: Policy | None = None) -
         methods=["POST"],
         response_model=PixAnalysisDTO,
         tags=["pix"],
-        dependencies=[Depends(internal_token)],
         summary="Analisar um Pix",
         description="Grava a análise e os motivos. Mesmo ID e conteúdo retornam a decisão original; conteúdo diferente gera 409.",
     )
@@ -96,13 +101,11 @@ def create_app(settings: Settings | None = None, policy: Policy | None = None) -
         methods=["GET"],
         response_model=PixAnalysisDTO,
         tags=["pix"],
-        dependencies=[Depends(internal_token)],
         summary="Consultar uma análise",
         description="Recupera a decisão original, sem recalcular o risco ou executar o GNN novamente.",
     )
     register_error_handlers(application)
-    # Request context/authentication wraps this middleware: unauthorized callers
-    # are rejected before we receive or buffer their bodies.
+    # Request context wraps body limits to correlate errors and set response headers.
     application.add_middleware(RequestLimitsMiddleware)
     register_request_middleware(application)
     return application
