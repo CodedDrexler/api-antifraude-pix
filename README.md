@@ -124,6 +124,11 @@ e é configurável em `duplicate_window_seconds`. Peso zero desativa os pontos.
 
 ## Verificar
 
+No Windows, abra o Docker Desktop e dê dois cliques em `testar.bat`.
+O arquivo cria um ambiente isolado, executa pytest, lint e formatação e remove
+os containers e o banco temporário ao terminar. A janela permanece aberta com o
+resultado. Para executar pelo terminal sem pausa: `.\testar.bat --no-pause`.
+
 ```powershell
 docker compose --profile test build tests
 docker compose --profile test run --rm tests
