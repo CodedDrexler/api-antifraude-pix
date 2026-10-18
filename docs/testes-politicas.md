@@ -7,13 +7,31 @@ ao código atual e têm links para suas linhas de definição.
 
 ## Execução
 
-A coleta identifica casos; aprovação exige execução. Os comandos completos e o
-projeto Compose isolado estão no [README](../README.md#testes-e-limites-da-avaliação).
-Execução em 18/10/2026 no projeto isolado `pix-docs-audit`, com GNN padrão
-`contribute`: **691 aprovados em 26,44s, sem falhas ou casos ignorados**.
-`ruff check src tests scripts` passou; `ruff format --check src tests scripts`
-confirmou os **84 arquivos Python** formatados. A limpeza dos artefatos foi
-incluída na imagem testada; o código da aplicação e dos testes foi preservado.
+A coleta identifica casos; aprovação exige execução. Para testar sem inserir
+dados sintéticos no ambiente principal, use outro projeto Compose e outra porta:
+
+```powershell
+$env:API_PORT = "18087"
+docker compose -p pix-verificacao up --build -d --wait
+docker compose -p pix-verificacao --profile test build tests
+docker compose -p pix-verificacao --profile test run --rm --no-deps tests
+docker compose -p pix-verificacao --profile test run --rm --no-deps tests ruff check src tests scripts
+docker compose -p pix-verificacao --profile test run --rm --no-deps tests ruff format --check src tests scripts
+docker compose -p pix-verificacao down
+Remove-Item Env:API_PORT
+```
+
+Execução em 18/10/2026 no projeto isolado `pix-policy-check`, com GNN padrão
+`contribute`: **691 aprovados em 26,25s, sem falhas ou casos ignorados**.
+O código Python foi preservado nesta revisão; lint e formatação dos 84 arquivos
+também foram aprovados na revisão anterior.
+
+Além da suíte, uma aceitação independente por HTTP e SQL verificou nove Pix,
+incluindo aprovação, 2FA, rejeição por montante e a sexta tentativa. Conferiu
+payload/hash, política, resultado, consulta, reenvio idempotente, conflito 409,
+reenvios concorrentes e entrada inválida sem consumir ID. Após recriar API e
+PostgreSQL com o mesmo volume, consultas e reenvios preservaram as decisões e
+a quantidade de registros. Nenhum dado foi inserido no banco principal.
 
 Testes unitários usam histórico fornecido/mocks; ASGI local testa transporte em
 memória. Testes PostgreSQL/HTTP precisam de API e banco. Sem

@@ -172,4 +172,4 @@ mesmo ID usa a avaliação salva, mesmo que o cadastro ou modo tenham mudado.
 Os testes cobrem a consulta real em PostgreSQL, persistência e replay,
 CPF com dez CNPJs, novo CNPJ, sócio posterior à fraude, papéis distintos, filiais,
 deduplicação, expiração/revogação, limites de busca, GNN e score sem contagem dupla.
-Execute a suíte e as verificações pelos comandos do [README](../README.md).
+Execute a suíte e as verificações pelo [guia de testes](testes-politicas.md#execução).

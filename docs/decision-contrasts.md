@@ -41,6 +41,6 @@ também históricos inteiros com o GNN habilitado.
 docker compose --profile test run --rm --no-deps tests pytest -q tests/test_untrust_contrasts.py tests/test_untrust_replay.py tests/test_gnn_contribution.py
 ```
 
-Use o ambiente isolado do [README](../README.md). O simulador reproduz tentativas,
+Use o [ambiente isolado de testes](testes-politicas.md#execução). O simulador reproduz tentativas,
 duplicidade, ordem de chegada e idempotência; não confirma liquidação nem sucesso
 de 2FA. Os contrastes verificam implementação, sem estimar eficácia real.

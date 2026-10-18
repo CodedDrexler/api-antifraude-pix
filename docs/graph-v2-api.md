@@ -158,4 +158,4 @@ ativa durante toda uma sequência de pagamentos.
 `test_temporal_live.py`, `test_temporal_live_db.py`, `test_gnn_http.py`,
 `test_temporal_case.py` e `test_gnn_contribution.py` verificam relógios, consultas,
 limites, abstenção, hash, contrato, precedência e replay. Consulte o
-[inventário atual](testes-politicas.md) e os comandos do [README](../README.md).
+[inventário atual e os comandos de testes](testes-politicas.md#execução).
