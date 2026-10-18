@@ -1,3 +1,4 @@
 # Model hashes must stay stable across Windows and Linux checkouts.
 models/*.json text eol=lf
+models/**/*.json text eol=lf
 *.bat text eol=crlf
