@@ -58,7 +58,7 @@ agravar a decisão; nenhuma dessas camadas relaxa uma restrição anterior.
 
 ## As 13 regras transacionais
 
-Os valores do pedido são inteiros em centavos: `50000` corresponde a R$ 500.
+Os valores do pedido são inteiros e em centavos: `50000` corresponde a R$ 500.
 As condições abaixo usam os padrões da [política configurada](config/risk-policy.json).
 
 | Regra | Quando se aplica | Pontos / fator |
@@ -254,7 +254,7 @@ se precisar manter o histórico.
 Com Docker e Docker Compose, execute na raiz:
 
 ```powershell
-docker compose up --build -d --wait
+docker compose up --build
 ```
 
 Abra o [Swagger](http://127.0.0.1:8000/docs) para enviar e consultar Pix.
