@@ -1,178 +1,90 @@
-# Decisões de arquitetura
+# Arquitetura da implementação vigente
 
-## Referências e escopo
-
-Base: [CodedDrexler/bootcamp-qi-tech](https://github.com/CodedDrexler/bootcamp-qi-tech),
-commit `10465f6af76f571be9928454f9ddfd71c983c2bd`.
-O repositório contém um banco demonstrativo e os exemplos do Base Service.
-Este projeto aproveita seu desenho de camadas, FastAPI, SQLAlchemy, PostgreSQL,
-commit no controller e erros estruturados para o problema Pix.
-As funcionalidades bancárias daquela entrega não fazem parte deste serviço.
-
-O desafio do hackathon define o escopo atual: decisão síncrona de Pix com
-histórico e justificativas. Cadastro, saldo, porquinhos e interface bancária
-não fazem parte deste serviço. Não existe integração externa no caminho da decisão.
+Política `pix-score-v9`; a versão OpenAPI da aplicação é `1.0.0`.
+Fontes: [app.py](../src/app.py), [controller](../src/controllers/pix_controller.py)
+e [schema SQL](../database/database.sql).
 
 ## Camadas
 
-```text
-src/app.py                     registro explícito das rotas e composição
-src/middlewares/               request ID e log
-src/schemas/                   formato e normalização da entrada
-src/resources/                 fronteira HTTP
-src/controllers/               fluxo, agregação do score e commit
-src/risk/rules/                regras puras separadas por fator de risco
-src/risk/types.py              contexto de avaliação e sinais encontrados
-src/risk/scoring.py            cálculo compartilhado de pontos, tetos e decisão
-src/repositories/              consultas, travas e escrita
-src/models/                    mapeamento das tabelas
-src/dtos/                      resposta pública
-src/errors/                    erros de domínio e tradução para HTTP
-database/database.sql          criação e restrições do PostgreSQL
-```
-
-O `DecisionEngine` é uma política pura chamada pelo controller. Recebe uma
-transação e um resumo do histórico, sem abrir conexões ou conhecer HTTP.
-As regras de `activity`, `duplication`, `exposure`, `account`, `counterparty`, `profile`,
-`device` e `access_context` ficam em módulos próprios de `src/risk/rules/`.
-Cada função recebe um `RuleContext` e produz `RuleMatch` com código, observação,
-limiar e indicação de limite forte. O registro explícito em `src/risk/registry.py`
-preserva a ordem dos motivos. As regras não consultam o banco nem calculam pontos.
-O `DecisionEngine` reúne regras, histórico e evidências da resposta. As funções
-de `src/risk/scoring.py` calculam pesos, tetos e faixas de decisão das regras e
-da camada relacional societária opcional. O tipo `History` fica
-em `src/risk/types.py`, sem depender do repository ou de SQLAlchemy.
-O Modelo Relacional Temporal v2 — experimental fica em `src/gnn/` e roda depois
-das outras camadas. No protótipo, pode elevar aprovação para 2FA, sem contribuir pontos.
-O controller obtém o histórico pelo repository e escolhe quando confirmar a escrita.
-O resource projeta a evidência interna em `PixResponseDTO`: `key`, `status` e
-`metadata` com `risk_score` e `bank_notification_required`, além de `untrust_score`
-somente quando há avaliação disponível do grafo. `include_details=true` acrescenta somente `rules`
-com nomes legíveis. O DTO interno e a política completa não são serializados por HTTP.
-
-Os diretórios Python usam namespace packages do Python 3.12, sem `__init__.py`.
-O código importa módulos explicitamente; o registro de regras fica em
-`src/risk/registry.py`, sem inicialização implícita de pacotes.
-
-A política atual `pix-score-v9` usa contribuições por regra, tetos por grupo,
-faixas de score e limites fortes explícitos. A [pesquisa e o cálculo completo](risk-scoring.md)
-detalham o racional. O score usa o mesmo retrato de histórico obtido dentro da
-transação protegida pelas travas existentes. Análises antigas mantêm seu conteúdo;
-novos IDs recebem o score salvo em `decision_metadata`, sem mudança de schema SQL.
-
-O único modelo de grafo ativo é o Modelo Relacional Temporal v2 — experimental,
-uma GNN simplificada inspirada em GraphSAGE, com avaliação salva em `decision_metadata.gnn_v2`
-e nome público em `label`. O padrão `contribute` permite somente aprovação para
-2FA, com corte vinculado ao modelo e à política avaliados. Também aceita `shadow`
-e `off`; nunca adiciona pontos ou suspeita própria. O carregamento, inferência,
-consulta e configuração do modelo anterior foram retirados. GET/replay continuam
-lendo decisões antigas, sem recalcular. Treino, inferência e limites estão em
-[graph-v2-api.md](graph-v2-api.md).
-O payload e a decisão continuam atômicos; os índices de dispositivo e destino
-possuem migração SQL aditiva para bases existentes.
-
-Adaptações em relação à referência:
-
-- Schemas Pydantic, já usados no projeto local, substituem o decorator de JSON Schema.
-  O contrato continua em uma camada própria e aparece em `/openapi.json` e `/docs`.
-- Uma dependency abre/fecha a sessão explicitamente; o controller dá commit e a
-  dependency faz rollback do que restou. A sessão não fica em variável global ou ContextVar.
-- Imports usam `src.` para funcionar sem modificar `PYTHONPATH`.
-- A entrada única é `src.app:app`. A porta local é 8000.
-- Os endpoints Pix do enunciado continuam singulares; não os renomeamos para outra convenção REST.
-
-## Banco primeiro
-
-`pix_analysis` guarda o pedido validado e sua decisão na mesma linha:
-
-| Grupo | Colunas |
+| Caminho | Responsabilidade |
 |---|---|
-| Identidade | `id` interno, `analysis_key` UUID público, `transaction_id` único do chamador |
-| Repetição | `payload_hash` SHA-256 do conteúdo normalizado |
-| Histórico consultável | documento do pagador, identidade do destino, dispositivo, centavos, data do evento |
-| Evidência | payload JSONB, status, metadata com motivos, sinais e parâmetros da política |
-| Auditoria | `created_at`, momento em que o serviço analisou o pedido |
+| `src/app.py` | Rotas e composição de política, banco e serviços opcionais. |
+| `src/middlewares/` | Contexto/log, limites de leitura do corpo e headers. |
+| `src/schemas/` | Validação e normalização do pedido. |
+| `src/resources/` | Fronteira HTTP e projeção do DTO público. |
+| `src/controllers/decision_engine.py` | Motor puro, sem SQL: regras, confiança contextual, pontos e decisão inicial. |
+| `src/controllers/account_untrust.py` | Incrementos próprios e restrição temporal por conta. |
+| `src/entity_risk.py` | Titular, cadastro societário verificado e composição optativa do fator `graph`. |
+| `src/gnn/` | Construção do grafo, inferência e contribuição limitada a 2FA. |
+| `src/repositories/` | Consultas, travas e inserção. |
+| `src/models/` | Mapeamento SQLAlchemy. |
+| `src/dtos/` | Auditoria interna e resposta pública. |
+| `src/errors/` | Erros de domínio e tradução HTTP. |
 
-Não há tabela de contas: cada pedido contém um retrato das contas fornecido pelo
-chamador. Repetir dados no JSON preserva a evidência de cada decisão, sem criar
-onboarding fora do escopo. Colunas de consulta evitam varrer JSON para cada regra.
-O índice por pagador/data atende as janelas; o índice parcial de aprovados atende o perfil.
-Status válidos, centavos positivos, IDs únicos e JSONs do tipo objeto são restrições SQL.
-Um trigger impede UPDATE/DELETE de decisões. O código não executa `create_all`:
-o SQL versionado é a fonte da criação do schema.
+Python usa namespace packages, imports `src.` e entrada `src.app:app`.
+O registro das regras é explícito em `src/risk/registry.py`.
 
-O volume `pix_data` mantém a história ao recriar a API. O SQL inicial executa
-somente em um banco novo. Para evoluir um banco com dados, escreva e aplique um
-script incremental revisado. Não apague volumes para atualizar uma instalação.
+## Sequência de uma nova análise
 
-A v5 adiciona `source_account_identity` e um índice por conta/recepção, com
-migração aditiva 004. O acumulado lê os incrementos das decisões imutáveis nos
-últimos 24 h de `created_at`, sem reinterpretar registros antigos ou somar o
-score acumulado anterior. As travas existentes tornam o incremento atômico.
-O aviso ao banco é somente um campo na metadata, sem comunicação externa.
-Detalhes e evidência de avaliação estão em [account-untrust.md](account-untrust.md).
+1. Middleware limita a leitura do corpo; schema normaliza documento e datas UTC.
+2. Controller obtém travas PostgreSQL por ID, documento do pagador e aparelho.
+3. Mesmo ID/hash recupera a decisão; conteúdo diferente gera 409.
+4. O horário de recepção é capturado depois das travas. O repository consulta o
+   histórico disponível, respeitando os cortes de evento e recepção.
+5. `DecisionEngine` avalia as 13 regras e a atenuação contextual. Pondera os
+   sinais, aplica tetos e decide pelos limites fortes, score e ausência de perfil.
+6. `account_untrust` calcula o incremento próprio e pode agravar a decisão.
+7. `entity_risk`, se habilitado, agrega o titular e avalia vínculos do cadastro.
+8. O grafo temporal roda por último. Em `contribute`, pode mudar somente
+   `approved` para `two_factor_required`, com manifesto compatível e score suficiente.
+9. Controller salva pedido e evidências juntos, confirma o commit e retorna o resumo.
+   A dependency faz rollback de qualquer trabalho restante e fecha a sessão.
 
-## Fluxo e concorrência
+`processing_time_ms` termina antes da inserção: inclui travas, consultas e motores,
+mas exclui persistência, commit e transporte. GET/replay não executam o motor.
 
-1. Middleware gera request ID e registra o contexto da requisição.
-2. Schema valida tipos, centavos inteiros, datas com fuso, IP e coordenadas.
-3. Controller solicita travas de transação PostgreSQL por ID do Pix, documento do pagador e aparelho.
-4. Repository busca o ID. Mesmo conteúdo devolve o resultado original; conteúdo diferente gera 409.
-5. Repository calcula o histórico por tempo do evento; o motor avalia todas as regras.
-6. Repository insere pedido e decisão juntos. Controller faz commit antes da resposta 200.
-7. Dependency faz rollback de trabalho incompleto e fecha a sessão em qualquer saída.
+## Persistência e concorrência
 
-As travas usam SHA-256 com redução para 64 bits e ordem numérica fixa. Colisões
-podem serializar pagadores independentes, mas não mudam resultados. A trava por
-ID também protege a disputa entre dois pagadores usando o mesmo ID. A trava por
-documento impede que seis Pix simultâneos leiam o mesmo contador antigo, inclusive
-em processos ou réplicas diferentes. A trava por aparelho serializa titulares
-diferentes usando o mesmo device_id, protegendo a contagem de compartilhamento.
-O isolamento é READ COMMITTED: cada leitura
-após obter a trava enxerga os commits anteriores. A API não depende de locks Python.
+`pix_analysis` guarda ID interno, UUID público, ID do chamador, hash SHA-256,
+identidades de origem/destino, documento, aparelho, valor, datas, payload JSONB,
+status e `decision_metadata`. Não há tabela de cadastro de contas.
 
-A transação pode esperar até 4 s por uma trava; cada comando SQL tem timeout de 5 s.
-Esses limites não constituem um prazo total da requisição. Em falha de banco,
-responde 503 e o chamador deve repetir com o mesmo ID. Se houve commit mas a
-resposta se perdeu, a repetição recupera a decisão já gravada.
+As identidades de conta excluem abertura e aparelho, mas incluem instituição
+quando informada. O histórico de envio por documento reúne contas do titular;
+o acumulado próprio continua por identidade de conta.
 
-## Normalização e limites
+Travas de transação usam hashes reduzidos a 64 bits e ordem numérica estável.
+O isolamento é READ COMMITTED. As travas por documento e aparelho serializam
+tentativas concorrentes também entre processos/réplicas. Há limite de 4s por
+espera de trava, 5s por comando SQL e 5s para aguardar conexão do pool.
+Esses limites não formam um prazo total para a análise.
 
-CPF/CNPJ perde pontuação e datas viram UTC antes do hash. Ordem das chaves JSON
-não importa. Campos opcionais omitidos e explicitamente nulos produzem o mesmo
-conteúdo normalizado. O payload persistido é essa versão validada/normalizada,
-não os bytes originais da requisição.
+Trigger recusa UPDATE/DELETE; restrições SQL limitam status, valores e unicidade.
+O administrador do banco pode contornar esses controles. O Compose usa o usuário
+administrativo `pix`; o papel restrito preparado na migração 003 não é automático.
 
-Documentos aceitam formato de CPF/CNPJ, sem checagem de dígito verificador: os
-identificadores sintéticos do contrato continuam válidos. Não há bureau, cadastro
-de dispositivos ou confirmação real de 2FA. `two_factor_required` é uma decisão
-final desta análise; o cliente executaria a confirmação fora deste escopo.
+O SQL inicial só executa em volume novo. Migrações pendentes devem ser aplicadas
+a bases existentes; não se apaga o volume para atualizar o schema. A aplicação não
+executa `create_all` nem migrações na inicialização.
 
-A referência temporal das regras é `transaction_date`, fornecida pelo chamador
-interno. Pedidos históricos são aceitos; um evento posterior não influencia um
-evento anterior, e decisões antigas nunca são recalculadas. O sistema pressupõe
-um chamador confiável e não comprova a veracidade de documento, conta, IP ou data.
-Para uso real, timestamps confiáveis, controle de atraso e resultados de fraude/2FA
-seriam necessários antes de calibrar o motor.
+## Modos, contrato e operação
 
-Todos os pedidos válidos inéditos contam para velocity e montante, inclusive
-reprovados ou com 2FA: representam tentativas. Aprovações formam o perfil de
-valores e a familiaridade. Pendências de 2FA nunca viram referência de valor.
-Sem aprovações anteriores, valores a partir de `no_history_min_amount` (R$ 500)
-exigem 2FA; valores menores passam pela avaliação das demais regras.
-O perfil registra `approved` ou `unavailable` como origem. Sem feedback de
-fraude confirmada, esse perfil também pode ser contaminado. Mudanças de conta,
-dispositivo e horário precisam ser calibradas com dados rotulados.
+API e Compose escolhem GNN `contribute` e entidade `shadow`. A classe de grafo
+isolada usa `shadow`; o controller sem serviços explicitamente fornecidos usa
+ambos desligados. Treino não ocorre na requisição. A imagem de produção contém
+apenas o candidato 42; os comparadores ficam na imagem de testes.
 
-## Operação
+HTTP expõe `key`, `status` e `metadata` com `risk_score`,
+`bank_notification_required` e `untrust_score` quando disponível.
+`include_details=true` acrescenta somente `rules`. Política, fatores, duplicidade,
+tempos e diagnóstico do modelo ficam na auditoria interna.
 
-`/health_check` é liveness sem banco e `/ready` consulta a tabela. `/health` mantém
-a resposta anterior. Os logs JSON têm método, rota parametrizada, status, duração
-e request ID; não incluem payload, token, documento, IP nem o ID do Pix na URL.
-O header `X-Request-ID` permite correlacionar a resposta com o log.
+`/health` e `/health_check` verificam processo; `/ready` consulta a tabela.
+O corpo é limitado a 32 KiB e sua leitura a 10s; o processamento posterior não
+está incluído nesse prazo. Logs registram método, rota parametrizada, status,
+tempo e request ID, sem payload, documento ou IP.
 
-As rotas aceitam requisições sem exigir `INTERNAL-TOKEN`.
-O banco não publica porta no
-host e a API publica somente em loopback. O container da API roda sem root.
-Métricas, rate limiting, TLS, papéis de banco e retenção são evoluções para uma
-operação real, não implementações implícitas nesta entrega.
+Rotas não exigem token. API publica em loopback; PostgreSQL não publica porta.
+Container API usa usuário sem root, filesystem somente leitura e capabilities
+removidas. Não há autenticação, liquidação, execução de 2FA, aviso externo,
+retenção ou monitoramento institucional. Veja [controles operacionais](banking-review.md).

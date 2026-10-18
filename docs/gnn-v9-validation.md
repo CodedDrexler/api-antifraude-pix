@@ -1,175 +1,61 @@
-# Validação do GNN na política v9
+# Avaliador de propostas do GNN na política v9
 
-A contribuição do grafo depende de benefício incremental e controle de intervenções
-indevidas. O avaliador em [validate_temporal_gnn.py](../scripts/validate_temporal_gnn.py)
-compara propostas sem alterar a API, seus pesos ou decisões salvas. O modo disponível
-na API permanece `shadow` ou `off` durante a avaliação.
+O script [validate_temporal_gnn.py](../scripts/validate_temporal_gnn.py) processa
+históricos pelo controlador e pela consulta PostgreSQL reais. Compara propostas
+de intervenção sobre uma linha de base sem contribuição da GNN. Seus serviços
+de inferência usam `shadow`; isso não altera o padrão `contribute` da API.
 
-## Resultado de 18/10/2026
+## Propostas e medição
 
-**A contribuição não foi habilitada.** As duas propostas foram avaliadas com os
-mesmos 550 cenários de calibração e 1.100 de teste, usando a política v9 e a
-consulta PostgreSQL real. O teste contém 500 positivos e 600 legítimos sintéticos.
-Os intervalos abaixo representam resultados dos três modelos separados, sem
-somar os mesmos cenários três vezes.
-
-| Proposta | Positivos com 2FA adicional / 500 | Legítimos com 2FA indevido / 600 | Taxa de fricção adicional | Maior limite superior nominal de 95% |
-|---|---:|---:|---:|---:|
-| Somente score | 389–417 | 14 em cada modelo | 2,33% | 3,88% |
-| Score + valor mínimo + dois repasses rápidos | 134–154 | 1–2 | 0,17–0,33% | 1,21% |
-
-As propostas não acrescentaram rejeições e obtiveram score nos 1.100 cenários.
-Os falsos positivos concentraram-se em comerciantes com liquidação rápida:
-14 de 100 com somente score e 1–2 de 100 com os filtros adicionais.
-
-Na proposta filtrada, as sementes 42 e 44 passaram nos critérios numéricos do
-teste principal, mas a 43 não demonstrou o limite superior de 1% exigido: seu
-intervalo nominal chegou a 1,21%. Não foi escolhido um vencedor depois do teste.
-Os limiares por modelo e os resultados completos estão no
-[relatório agregado](../models/gnn-v9-validation.metrics.json).
-
-O complemento com o contrato do bootcamp expôs outra limitação: o histórico
-fictício de liquidação comercial legítima recebeu **99,95 pontos no modelo 42**,
-e as duas propostas pediriam 2FA nos três modelos. O pagamento habitual e o
-destinatário novo sem outros riscos foram preservados. O cenário de origem
-suspeita seria sinalizado pelas sementes 42/43, mas não pela 44.
-Esses cinco casos ilustram comportamento; não estimam uma taxa de erro populacional.
-Veja o [relatório dos exemplos do bootcamp](../models/gnn-v9-bootcamp.metrics.json).
-
-O ganho nos cenários artificiais existe, e os filtros reduzem bastante os falsos
-positivos. Ainda assim, o resultado não sustentou ativação automática nem para o
-protótipo com o critério adotado. O modo `shadow` foi preservado, incluindo uma
-regressão que verifica a aprovação do comerciante mesmo com score acima de 99.
-O próximo experimento precisaria distinguir liquidação comercial legítima com
-novos atributos verificáveis e um novo teste, sem reajustar cortes sobre este.
-
-## Desenho definido antes da medição
-
-- Três modelos já exportados, sementes 42, 43 e 44; nenhum vencedor é escolhido no teste.
-- 550 cenários de calibração e 1.100 de teste, em 11 categorias. As sementes dos cenários
-  começam em 710000 e 910000, fora das faixas do treino original. A calibração usa maio
-  e o teste usa setembro. Rótulos representam a intenção sintética do gerador.
-- O controlador real processa cada evento em ordem cronológica, incluindo score,
-  confiança por relação e acumulado próprio. O recebimento simulado acompanha o evento.
-- A inferência usa a consulta PostgreSQL da API, com dois saltos e seus limites reais.
-  Uma avaliação adicional com todo o histórico é apenas um diagnóstico da diferença.
-- Cada cenário roda dentro de uma transação externa descartada ao terminar. Commits
-  internos do controlador usam savepoints. Não há gravação no banco principal.
-- A linha de base usa regras v9 e acumulado próprio. A contribuição de `entity_risk`
-  fica desligada para isolar o efeito do GNN.
-
-O teste é exploratório. O gerador continua sendo da mesma família artificial usada
-no treinamento; sementes novas não equivalem a novas populações ou fraude confirmada.
-Há pares temporais relacionados, e os três modelos são avaliados nos mesmos eventos.
-Por isso, seus resultados não são somados como observações independentes.
-
-O material disponível do bootcamp é o contrato em `examples/pix.json`, sem rótulo
-de fraude confirmado. O complemento [bootcamp_graph_cases.py](../scripts/bootcamp_graph_cases.py)
-parte desse pedido de R$ 1.500 e acrescenta históricos fictícios explícitos:
-pagamento habitual, destinatário novo, liquidação rápida legítima e uma origem
-com remetentes de risco. O primeiro Pix sem histórico também é verificado.
-Os rótulos desses históricos são hipóteses dos cenários. Os cinco exemplos
-reutilizam os limiares congelados, sem selecionar novos pesos ou cortes, e não
-entram na estimativa populacional das taxas do teste maior.
-
-## Propostas comparadas
-
-| Proposta | Condições para acrescentar uma intervenção |
+| Proposta | Condição para aprovação → 2FA |
 |---|---|
-| `score_only_2fa` | Decisão original aprovada e score do grafo acima do limiar |
-| `corroborated_2fa` | As condições anteriores, valor a partir de `no_history_min_amount` e pelo menos dois pares de repasse rápido |
+| `score_only_2fa` | Avaliação disponível e score no limiar congelado. |
+| `corroborated_2fa` | Mesma condição, valor ≥ `no_history_min_amount` e ≥dois pares de repasse rápido. |
 
-Ambas só propõem `approved → two_factor_required`. Não acrescentam pontos,
-rejeições ou suspeita própria; não alteram decisões já restritas. Uma avaliação
-indisponível não propõe ação. Não é simulado o sucesso da autenticação adicional.
+Não há pontos, rejeições adicionais, redução de restrições ou incremento próprio
+nessas propostas. O avaliador usa explicitamente os três comparadores fixos em
+`models/gnn-directed-temporal-v2-seed-*.json`; não avalia automaticamente o modelo
+42 padrão da API. Para os candidatos atuais, use a [calibração conservadora](gnn-false-positives.md).
 
-Os pares rápidos são um atributo construído do mesmo histórico que o modelo usa,
-não uma confirmação externa independente de fraude. A comparação serve para medir
-se essa exigência adicional reduz a fricção nos cenários legítimos.
+Os conjuntos padrão têm 550 cenários de calibração e 1.100 de teste, em 11
+categorias, com faixas de sementes/datas separadas. Cada cenário usa transação
+externa descartada; commits do controller tornam-se savepoints. O horário
+de evento simula a recepção. `entity_risk` fica desligado para isolar o efeito.
 
-Para cada modelo/proposta, o limiar maximiza novos casos sintéticos positivos na
-calibração com até 1% de novos desafios entre os legítimos que a linha de base
-aprovaria. O denominador não inclui pagamentos já recusados ou pendentes de 2FA.
-Os limites são congelados antes de gerar e avaliar o teste. Não se reajusta o
-limiar depois de ver seus resultados.
+O limiar é escolhido na calibração com orçamento pontual de até 1% de novos
+desafios entre legítimos aprováveis. É congelado antes do teste. O relatório
+separa matriz de confusão, ganho incremental, fricção, rejeições e cobertura.
 
-Separar treinamento, escolha do limiar e avaliação reduz o risco de sobreajuste:
-[documentação de limiares do scikit-learn](https://scikit-learn.org/stable/modules/classification_threshold.html).
-
-## Critérios de decisão
-
-Cada uma das três sementes precisa cumprir todos estes critérios na proposta:
-
-1. Acrescentar intervenção em pelo menos 5% dos positivos sintéticos totais.
-2. Limite superior do intervalo nominal de 95% de Wilson para novos desafios
-   em legítimos aprováveis não ultrapassar 1%.
-3. Nenhuma categoria legítima ter mais de 5% de desafios adicionais.
-4. Não gerar rejeições adicionais.
-5. Produzir avaliação em pelo menos 95% dos cenários.
-
-Os intervalos são estimativas binomiais nominais, sem corrigir a dependência entre
-cenários pareados. São uma verificação adicional de tamanho de amostra, não uma
-garantia de operação real. Os critérios de 1%, 5% e 95% são hipóteses de engenharia
-definidas para este experimento, sem calibração bancária ou caráter regulamentar.
-
-Passar os critérios sintéticos permite investigar uma proposta. Ativá-la em
-pagamentos reais também exige resultados confirmados, avaliação prospectiva,
-medição de perdas/fricção e acompanhamento de mudança de distribuição. Esse
-experimento não produz esses dados nem ativa contribuição automaticamente.
-
-## Como interpretar falsos positivos
-
-O relatório separa:
-
-- Matriz de confusão da proposta de intervenção em todos os casos sintéticos.
-- Novos desafios de 2FA entre legítimos que seriam aprovados pela linha de base.
-- Ganho de intervenção em positivos que a linha de base aprovaria.
-- Recusas adicionais, cobertura e resultados por categoria.
-
-Solicitar 2FA não comprova detecção de fraude. A prevalência artificial também
-não estima a precisão no Pix real. Por exemplo, em 100 mil operações hipotéticas,
-com fraude em 0,1%, recall de 80% e falsos positivos de 1%, seriam 80 alertas
-corretos e 999 incorretos: aproximadamente 7,4% de precisão. Os números são uma
-ilustração matemática, não uma estimativa de prevalência ou desempenho do projeto.
-[Definições de precisão, recall e falsos positivos](https://developers.google.com/machine-learning/crash-course/classification/accuracy-precision-recall).
-
-## Proteções que já existem na API
-
-- Pontos limitados por fator para conter sinais correlacionados; rejeição por
-  score exige pelo menos dois fatores positivos. Limites fortes têm prioridade.
-- Valor e histórico mínimo contextualizam sinais de aparelho, destino e horário.
-  Sem perfil aprovado, somente valores a partir do limite configurado exigem 2FA
-  por ausência de referência; as demais regras continuam ativas.
-- Confiança por relação pode reduzir apenas o desvio de valor, com aprovações
-  suficientes, dias distintos e valor compatível com a mediana daquela relação.
-- Histórico futuro é excluído; informação indisponível na recepção não é usada.
-  Os próprios incrementos expiram e não incorporam a suspeita dos destinatários.
-- O grafo abstém-se quando faltam dados, seus limites são excedidos ou a
-  inferência falha. Sua saída não é convertida em probabilidade de fraude.
-- O modo `shadow` impede que falsos alarmes experimentais mudem a decisão.
-
-Essas proteções reduzem fontes conhecidas de erro; não comprovam uma taxa de
-falsos positivos sem uma avaliação com resultados reais.
+Os critérios por semente são: ganho ≥5% dos positivos; limite superior nominal
+de Wilson 95% da fricção ≤1%; fricção por categoria legítima ≤5%; nenhuma rejeição
+adicional; cobertura ≥95%. São critérios do experimento, sem calibração bancária.
+O teste não escolhe uma semente vencedora nem habilita contribuição.
 
 ## Reprodução
 
-Use somente um projeto Compose descartável. O comando `run` abaixo não inicia a
-API porque a avaliação chama o controlador diretamente:
+Use banco descartável e pasta de saída separada. Crie `tmp` antes do mount:
 
 ```powershell
-docker compose -p bootcamp-gnn-validation up -d --wait db
-docker compose -p bootcamp-gnn-validation --profile test build tests
-docker compose -p bootcamp-gnn-validation --profile test run --rm --no-deps -v "${PWD}/models:/results" tests python -m scripts.validate_temporal_gnn --output /results/gnn-v9-validation.metrics.json
-docker compose -p bootcamp-gnn-validation down --volumes --remove-orphans
+New-Item -ItemType Directory -Force tmp | Out-Null
+docker compose -p pix-gnn-validation up -d --wait db
+docker compose -p pix-gnn-validation --profile test build tests
+docker compose -p pix-gnn-validation --profile test run --rm --no-deps -v "${PWD}/tmp:/results" tests python -m scripts.validate_temporal_gnn --output /results/gnn-v9-validation.metrics.json
+docker compose -p pix-gnn-validation --profile test run --rm --no-deps -v "${PWD}/tmp:/results" tests python -m scripts.bootcamp_graph_cases --threshold-report /results/gnn-v9-validation.metrics.json --output /results/gnn-v9-bootcamp.metrics.json
+docker compose -p pix-gnn-validation down --volumes --remove-orphans
 ```
 
-Não aponte `PIX_TEST_DATABASE_URL` para o banco principal. O avaliador não treina
-modelos, não substitui pesos e não altera a configuração do serviço. Linhas por
-cenário podem ser exportadas com `--rows-output`, se necessário; por padrão só o
-[relatório agregado](../models/gnn-v9-validation.metrics.json) é preservado.
+O segundo avaliador usa o contrato de `examples/pix.json` e históricos fictícios
+de pagamento habitual, destinatário novo, liquidação rápida e origem com contatos
+de risco. São regressões ilustrativas, não observações adicionais de uma população.
 
-Para executar o complemento do contrato antes de encerrar o banco descartável:
+## Limites
 
-```powershell
-docker compose -p bootcamp-gnn-validation --profile test run --rm --no-deps -v "${PWD}/models:/results" tests python -m scripts.bootcamp_graph_cases --threshold-report /results/gnn-v9-validation.metrics.json --output /results/gnn-v9-bootcamp.metrics.json
-```
+Os modelos recebem o mesmo cenário; resultados não são somados como observações
+independentes. Pares artificiais e família do gerador induzem dependência. 2FA
+solicitado não comprova fraude detectada ou autenticação realizada. A intervenção
+é simulada no candidato final sobre histórico congelado; não mede todos os efeitos
+de feedback em perfis de uma sequência com contribuição ativa.
+
+[test_gnn_validation.py](../tests/test_gnn_validation.py) verifica propostas,
+seleção de corte, denominadores e critérios. O [inventário](testes-politicas.md)
+lista os testes da implementação atual.

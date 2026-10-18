@@ -6,21 +6,23 @@ API em Python 3.12, FastAPI e PostgreSQL 16 que avalia um Pix e retorna
 `approved`, `two_factor_required` ou `rejected`, preservando decisão e evidências.
 Os scores são indicadores heurísticos; não representam probabilidade de fraude.
 
-## Escopo desta documentação
+## Implementação vigente
 
-Esta atualização publica o projeto com a política **`pix-score-v9`**, a integração
-do grafo temporal v2, modelos, testes e entregáveis. A revisão anterior
-`1ca3e5c` usava **`pix-score-v8`**; o quadro abaixo resume a evolução.
+A política é **`pix-score-v9`**, definida em [risk-policy.json](config/risk-policy.json).
+A API informa versão OpenAPI **1.0.0** em [app.py](src/app.py); esse número é
+independente da versão da política e da arquitetura temporal v2.
 
-| Comportamento | Revisão anterior v8 | Revisão atual v9 |
-|---|---|---|
-| Ausência de referência | Primeiro Pix/referência ausente exigem 2FA independentemente do valor. | Exigem 2FA por esse motivo somente a partir de R$ 500; demais controles continuam. |
-| Formação inicial do perfil | Pode usar a primeira tentativa pendente como referência provisória. | Usa somente aprovações; pendências nunca formam referência. |
-| Grafo temporal v2 | `shadow` ou `off`, sem intervenção. Há também implementação legada v1. | V2 substitui v1; integração posterior admite `contribute`, limitado a aprovação → 2FA. |
-| Detalhes HTTP | Exibe metadados/evidências conforme contrato v8. | Resumo público; `include_details=true` acrescenta apenas nomes das regras. |
+| Componente | Padrão efetivo |
+|---|---|
+| Regras | 13 regras, somente aprovações formam referência de valores; ausência de referência exige 2FA a partir de R$ 500. |
+| Acumulado próprio | Habilitado, janela de 24h; bloqueio pelo acumulado desligado. |
+| Titular/vínculos | `ENTITY_RISK_MODE=shadow`, sem cadastro societário carregado por padrão. |
+| Grafo temporal | `GNN_V2_MODE=contribute`, candidato `gnn-false-positive-v1-seed-42`; pode elevar aprovação para 2FA, sem pontos. |
+| HTTP | Resumo público; `include_details=true` acrescenta somente os nomes das regras. |
 
-Executar esta revisão aplica a política v9. O Docker Compose usa o grafo temporal
-em `contribute` por padrão, conforme a configuração e o manifesto incluídos.
+O Docker Compose e a composição da API usam esses modos por padrão. A classe
+`TemporalGraphService`, quando instanciada diretamente para experimentos, usa
+`shadow`. Variáveis de ambiente podem alterar os modos na inicialização.
 
 ## Conta enviadora, receptora e titular
 
@@ -107,7 +109,7 @@ aprovação local do pagador com aquele aparelho/destino em **30 dias**.
 | Possível duplicidade | Mesmas contas de origem/destino, mesmo valor e outro ID; tentativa anterior aprovada/pendente em [evento−120s, evento]. | 30 / `duplication` |
 
 Frequência, montante e diversidade contam também rejeições e pendências. Perfil e
-familiaridade usam aprovações; na v9, pendências nunca criam/elevam referência.
+familiaridade usam aprovações; pendências nunca criam/elevam referência.
 Idade usa abertura informada e data do Pix; sete dias completos deixam de ser conta
 recente. Duplicidade não usa rejeição anterior e não é escondida por troca de aparelho
 ou abertura. Outros canais mantêm os controles, exceto o sinal específico de app.
@@ -121,7 +123,7 @@ Essas regras não verificam limites bancários regulatórios ou blacklist extern
 | `account_untrust` | Incrementos próprios da conta recebidos em 24h. | Pode exigir 2FA e indicar aviso; bloqueio optativo. |
 | Suspeita própria do titular | Mesmos incrementos agregados entre contas do documento. | Pode exigir 2FA em `entity_risk=contribute`. |
 | Exposição societária | Ocorrências e vínculos verificados, ponderados e deduplicados. | Pode acrescentar pontos/2FA conforme o modo da camada. |
-| Score temporal do grafo | Saída da rede ×100; na revisão local é exposta como `untrust_score`. | Observa ou propõe 2FA conforme versão/modo; não é o acumulado próprio. |
+| Score temporal do grafo | Saída da rede ×100; na resposta pública é exposta como `untrust_score`. | Observa ou propõe 2FA conforme versão/modo; não é o acumulado próprio. |
 
 Pontos por regra: `floor(peso × percentual_do_fator / 100)`. Percentuais padrão
 são 100%. Dentro do fator, sinais maiores consomem o teto primeiro; código da regra
@@ -198,9 +200,8 @@ remetente; uma entrada suporta um par. Esses indicadores não acrescentam pontos
 
 | Versão / modo | Tratamento da saída |
 |---|---|
-| V2 na revisão v8: `shadow` / `off` | Observa ou desativa; nunca altera status. |
-| V2 atual: `shadow` / `off` | Mantém observação ou desativação. |
-| V2 atual: `contribute` | No protótipo, pode elevar somente `approved` para `two_factor_required` com score ≥75,0977 e modelo/política compatíveis com manifesto avaliado. |
+| V2: `shadow` / `off` | Mantém observação ou desativação. |
+| V2: `contribute` | No protótipo, pode elevar somente `approved` para `two_factor_required` com score ≥75,0977 e modelo/política compatíveis com manifesto avaliado. |
 
 O corte corresponde a `0.750977`, método `score_only_2fa/confidence_budget`.
 Manifesto ausente/inválido, hash de modelo ou política divergente impedem ação.
@@ -209,7 +210,7 @@ não gera suspeita própria nem aviso bancário. Score baixo não concede confia
 ou atenua regras. O fator societário `graph` é independente dessa rede neural.
 
 Histórico insuficiente/truncado/inválido e falha tratada de inferência causam
-abstenção, sem score parcial ou nova intervenção. Sem avaliação, a revisão atual
+abstenção, sem score parcial ou nova intervenção. Sem avaliação, a API
 omite `untrust_score`; zero numérico é válido. Falha SQL continua sendo erro, não
 aprovação silenciosa. Avaliações sintéticas e retreinos não publicam nem ativam
 automaticamente uma nova política; o modo ativo foi uma escolha explícita
@@ -228,7 +229,7 @@ para o protótipo e está incluído nesta revisão.
 - Entrada exige valor inteiro positivo até BIGINT, datas ISO com fuso e abertura
   não posterior ao Pix; participante do destino obrigatório com oito dígitos.
   Campos extras e inválidos são recusados sem consumir ID.
-- Transporte exige JSON, até 32 KiB reais e prazo padrão 10s; erros 415/413/408,
+- Transporte exige JSON, até 32 KiB reais e prazo padrão de 10s para ler o corpo; erros 415/413/408,
   Content-Length inválido 400, entrada 400, ausente 404 e falha de banco 503. Após 503,
   repita o ID. Há no-store, nosniff, no-referrer e identificador de requisição;
   erro inesperado 500 não expõe conteúdo sensível. Rotas Pix não exigem token.
@@ -246,7 +247,7 @@ docker compose up --build -d --wait
 ```
 
 Abra o [Swagger](http://127.0.0.1:8000/docs) e use um ID novo. A revisão publicada
-usa v9, incluindo seu início sem histórico descrito no quadro de versões.
+usa a política e os modos descritos em Implementação vigente.
 Porta/modos podem ser definidos em `.env`, conforme [.env.example](.env.example).
 `docker compose down` preserva o volume `pix_data`.
 
@@ -277,18 +278,58 @@ docker compose --profile test run --rm --no-deps tests ruff format --check src t
 
 Esses testes usam o banco do projeto Compose; para uma base separada, use outro
 nome de projeto (`-p`) e outra `API_PORT` desde a inicialização dos serviços.
+Exemplo em PowerShell:
+
+```powershell
+$env:API_PORT = "18086"
+docker compose -p pix-verificacao up --build -d --wait api
+docker compose -p pix-verificacao --profile test build tests
+docker compose -p pix-verificacao --profile test run --rm --no-deps tests
+docker compose -p pix-verificacao --profile test run --rm --no-deps tests ruff check src tests scripts
+docker compose -p pix-verificacao --profile test run --rm --no-deps tests ruff format --check src tests scripts
+docker compose -p pix-verificacao down
+Remove-Item Env:API_PORT
+```
+
 GitHub Actions também executa as verificações em push/PR.
 Os testes cobrem fronteiras, combinação de fatores, concorrência, persistência,
 replay, recortes temporais e separação entre risco próprio e relacional.
 
-Relatórios e inventários de outras revisões são registros históricos, não
-cobertura automática da revisão atual.
+O [inventário de testes](docs/testes-politicas.md) corresponde aos arquivos atuais.
+Verificação em 18/10/2026, em banco isolado: **691 testes aprovados**, sem
+falhas ou casos ignorados. Lint e formatação passaram nos 84 arquivos Python.
 Dados sintéticos não comprovam eficácia ou taxa de falsos positivos em Pix real.
 
 Referências disponíveis no código publicado: [regras](docs/risk-scoring.md),
 [confiança contextual](docs/contextual-trust.md), [acumulado](docs/account-untrust.md),
 [titular e vínculos](docs/entity-risk.md), [grafo temporal](docs/graph-v2-api.md),
 [experimentos](docs/graph-v2-experiment.md) e [arquitetura](docs/architecture.md).
-Os [entregáveis](entregaveis) incluem apresentações e roteiros.
+
+## Arquivos mantidos no Git
+
+Há uma única apresentação versionada: [apresentação v2](pix-antifraude-apresentacao-v2.pptx),
+na raiz do repositório. A apresentação v3, as cópias de outras apresentações e
+os roteiros de fala foram removidos da árvore de arquivos, assim como os relatórios
+de políticas anteriores sem uso atual. O histórico de commits permanece no Git.
+
+Os identificadores `v1`/`v2` dos modelos e manifestos designam formatos/experimentos,
+não cópias alternativas da aplicação. Permanecem somente os artefatos consumidos
+pela execução, comparação reproduzível ou regressões atuais:
+
+| Artefatos | Consumidor atual |
+|---|---|
+| `models/false-positive-v1/gnn-false-positive-v1-seed-42.json` | Modelo padrão da API; único peso copiado para a imagem de produção. |
+| Candidatos 43/44 na mesma pasta | Comparação e regressões das três sementes predefinidas. |
+| `models/false-positive-v1/conservative/` | Avaliação e cortes congelados que sustentam o manifesto ativo. |
+| Avaliação e cortes na raiz de `models/false-positive-v1/` | Controle da separação dos conjuntos e dos hashes entre treino e calibração conservadora; usado por `test_gnn_false_positives.py`. |
+| `models/gnn-directed-temporal-v2-seed-*.json` e seu relatório | Comparadores fixos dos avaliadores e fixtures do caso temporal; não são o modelo padrão da API. O relatório registra o benchmark de origem dos comparadores, não métricas atuais do serviço. |
+| `config/gnn-contribution.json` | Corte 0,750977 vinculado ao modelo e à política; os testes verificam também o hash do relatório de validação. |
+| `database/migrations/002_*.sql` a `007_*.sql` | Scripts de evolução de bases existentes; não são cópias do schema a descartar. A migração 003 de credenciais é opcional e não é executada pelo Compose. |
+
+Não renomeie nem regrave pesos ou relatórios congelados para apenas mudar o nome
+da versão: seus hashes e caminhos são usados pelos testes e pelo manifesto.
+Novas avaliações devem gravar em outra pasta e não substituem o modelo da API
+automaticamente. O [guia de treino](docs/graph-v2-experiment.md) descreve essa separação.
+
 O projeto não executa 2FA, liquidação, envio de avisos
 ou gestão de limites bancários; aprovação local não confirma pagamento.

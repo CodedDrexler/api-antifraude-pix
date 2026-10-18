@@ -1,10 +1,10 @@
 # Risco do titular e vínculos societários
 
-Implementação da camada `entity_risk`, API 2.4.0. O modo padrão é **shadow**:
-calcula e grava as evidências sem alterar score ou decisão. O GraphSAGE existente
-continua disponível; esta camada é uma heurística explicável, sem retreino.
+Implementação da camada `entity_risk`, política `pix-score-v9`. O modo padrão é **shadow**:
+calcula e grava as evidências sem alterar score ou decisão. O grafo temporal v2 é uma camada separada; `entity_risk` é uma heurística
+explicável, sem retreino.
 
-## O que mudou
+## Indicadores
 
 | Nível | Fonte e significado |
 |---|---|
@@ -17,7 +17,7 @@ próprio zero pode apresentar exposição relacional alta por controlar CNPJs co
 ocorrências confirmadas. Os indicadores são distintos: ausência de evidência própria
 não comprova confiança e exposição não é confirmação de que o titular cometeu fraude.
 
-Entradas e saídas de Pix também passaram a ter indicadores separados em
+Entradas e saídas de Pix têm indicadores separados em
 `entity_risk.financial_features`: maior untrust, três maiores valores, proporção de
 contatos suspeitos e pares de recebimento/repasse em até 30 minutos. São considerados
 os últimos dez contatos de cada direção, em 24 h, com deduplicação de IDs. Cada
@@ -86,7 +86,8 @@ fortes independentes adicionais. O resultado é limitado a 100. Untrust indireto
 de empresas relacionadas entra como sinal mais fraco: metade do maior untrust
 ponderado, sem somar dezenas de suspeitas fracas como se fossem confirmações.
 
-O modelo de grafo ativo é exclusivamente o v2, que observa sem acrescentar pontos.
+O modelo temporal ativo é o v2. Em `shadow`, observa; no padrão `contribute`,
+pode exigir 2FA conforme o [manifesto](gnn-contribution.md), sem acrescentar pontos.
 Ele não compartilha nem consome o teto de contribuição dos vínculos verificados.
 
 O acréscimo transacional é `ceil(exposição × 20 / 100)`. Ele ocupa o fator
@@ -117,7 +118,8 @@ confirmadas independentes do cadastro continuam disponíveis.
 
 ## Exemplo reproduzido
 
-Comparação com uma operação normal que o motor anterior aprovaria:
+Comparação para uma operação que as regras e o acumulado aprovariam,
+com o GNN desligado para isolar os vínculos:
 
 | Caso sintético | Antes | `contribute` | Explicação |
 |---|---|---|---|
@@ -133,11 +135,10 @@ vínculo encerrado, revogação, informação futura, expiração, cadastro ause
 50 empresas limpas sem diluir uma ocorrência forte. Shadow preservou score e decisão
 em todos os casos. Isso verifica comportamento e controles, não precisão/recall real.
 
-Resultados: [entity-risk-comparison.metrics.json](../models/entity-risk-comparison.metrics.json).
-Para reproduzir com o ambiente de desenvolvimento instalado:
+Para gerar um relatório da implementação atual, com dependências de desenvolvimento:
 
 ```powershell
-python -m scripts.demo_entity_risk
+python -m scripts.demo_entity_risk --output tmp/entity-risk-comparison.metrics.json
 ```
 
 ## Configuração e banco
@@ -168,13 +169,7 @@ imutável salva no banco. O resumo público não inclui `entity_risk`;
 `include_details=true` acrescenta somente os nomes das regras aplicadas. Repetir o
 mesmo ID usa a avaliação salva, mesmo que o cadastro ou modo tenham mudado.
 
-Os testes novos cobrem a consulta real em PostgreSQL, persistência e replay,
+Os testes cobrem a consulta real em PostgreSQL, persistência e replay,
 CPF com dez CNPJs, novo CNPJ, sócio posterior à fraude, papéis distintos, filiais,
 deduplicação, expiração/revogação, limites de busca, GNN e score sem contagem dupla.
-O ambiente principal não foi reiniciado nem recebeu dados sintéticos; a verificação
-integrada usa banco e containers temporários isolados.
-
-Verificação final: **365 testes passaram**, sem falhas ou casos ignorados;
-lint e formatação passaram nos 62 arquivos Python. Os containers e o banco
-temporários foram removidos ao terminar. Para verificar o código atual, execute
-a suíte pelos comandos do [README](../README.md).
+Execute a suíte e as verificações pelos comandos do [README](../README.md).

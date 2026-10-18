@@ -1,12 +1,11 @@
 # Perfil por relação e atribuição do risco
 
-A política `pix-score-v8` introduziu a contextualização mantida na v9, preservando
-as rotas e o histórico existentes. Ela contextualiza a anomalia de valor e distingue risco da operação
+A política `pix-score-v9` contextualiza a anomalia de valor e distingue risco da operação
 de evidência própria do pagador. Os parâmetros são hipóteses do projeto.
 
 ## Cofre de Confiança Contextual
 
-A referência geral usa a média das últimas dez aprovações. Desde a v9, pendências
+A referência geral usa a média das últimas dez aprovações. Pendências
 de 2FA não fornecem referência provisória; sem aprovações, o perfil fica indisponível.
 O Cofre usa uma
 amostra separada: somente aprovações locais sem limites críticos registrados,
@@ -37,8 +36,9 @@ seus pontos anteriores e a justificativa continuam nas evidências. Só esse sin
 é atenuado. Frequência, montante, dispositivo, conta, horário e grafo permanecem
 independentes. As medianas não substituem a média geral da política atual.
 
-O resumo informa `applied`, `reason`, `profile_points_before` e
-`profile_points_after`. Os detalhes preservam amostras contadas, medianas e versão.
+A auditoria interna informa `applied`, `reason`, `profile_points_before`,
+`profile_points_after`, amostras, medianas e versão. Esses dados não integram
+o resumo HTTP; `include_details=true` acrescenta somente nomes de regras.
 Isso é familiaridade local provisória; não é saldo, whitelist nem confirmação
 de pagamento. Muitas aprovações próprias ainda podem sofrer manipulação; o
 Cofre não concede imunidade nem comprova redução de fraude real.
@@ -63,16 +63,16 @@ gravadas e contando para frequência e montante, inclusive rejeições.
 
 ## Compatibilidade e implantação
 
-As novas evidências próprias usam `account_untrust.evidence_version=sender-evidence-v2`.
+As evidências próprias usam `account_untrust.evidence_version=sender-evidence-v2`.
 As consultas de acumulado, titular e grafo temporal ignoram incrementos sem essa
 versão: eles podem conter contribuições de destinatários da política antiga.
 Os registros anteriores continuam consultáveis pelo GET e não são reescritos.
-Na transição, a nova janela de evidência própria começa a ser formada com a v8.
-Essa escolha evita transportar atribuições antigas ambíguas para a nova política.
+A versão de evidência impede transportar atribuições incompatíveis para a política atual.
 
-Não há novas colunas ou rotas. Reinicie a API com a política e o código atualizados;
+A confiança contextual não exige colunas ou rotas próprias. Reinicie a API com a política e o código atualizados;
 as migrações exigidas pela integração do grafo são documentadas separadamente.
-O grafo v2 em observação não modifica a ação nem realimenta o acumulado.
+O grafo v2 em `shadow` não modifica a ação. Em `contribute`, pode exigir 2FA
+sem pontos nem realimentação, conforme o [manifesto ativo](gnn-contribution.md).
 
 ## Verificação
 

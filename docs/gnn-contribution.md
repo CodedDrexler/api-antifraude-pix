@@ -9,12 +9,13 @@ O corte é o de `score_only_2fa/confidence_budget`, congelado antes do teste no
 
 Essa contribuição é uma escolha explícita para o protótipo do bootcamp. Os
 resultados foram obtidos com históricos fictícios; não representam validação
-de eficácia em pagamentos reais. Os relatórios históricos continuam imutáveis
-e registram que os avaliadores não habilitavam contribuição automaticamente.
+de eficácia em pagamentos reais. Os avaliadores não alteram o modo da API;
+a composição do serviço habilita a contribuição explicitamente.
 
 ## Composição e limites
 
-- `risk_score` continua sendo o score das regras. Um Pix pode ter score 0 e
+- `risk_score` continua sendo o score das regras e, se habilitada para
+  contribuir, da camada societária; a rede temporal não acrescenta pontos. Um Pix pode ter score 0 e
   exigir 2FA pelo grafo; `include_details=true` inclui
   **Padrão de risco nas relações entre contas** quando esse controle decide.
 - O GNN nunca rejeita sozinho nem remove uma restrição das outras camadas.
@@ -57,8 +58,9 @@ política diferente, banco real, razão pública e replay. Históricos completos
 também são processados com `contribute` ativo, sem formar referência aprovada a
 partir das novas pendências e sem alimentar o acumulado com o próprio GNN.
 
-A suíte completa passou em **691 casos** com `contribute` ativo; lint e
-formatação também passaram. Os 45 testes específicos de contribuição incluem
+A coleta da suíte atual identifica **691 casos**, incluindo **45 casos** de
+contribuição. A execução e seus resultados são registrados no
+[inventário](testes-politicas.md). Esses casos incluem
 reprodução do comportamento do corte congelado e os cenários legítimo/suspeito
 por HTTP, com dados de teste isolados do banco principal.
 
