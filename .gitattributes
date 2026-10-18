@@ -2,3 +2,4 @@
 models/*.json text eol=lf
 models/**/*.json text eol=lf
 *.bat text eol=crlf
+*.pdf binary
